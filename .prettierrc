@@ -1,0 +1,7 @@
+{
+  "semi": false,
+  "arrowParens": "avoid",
+  "experimentalTernaries": true,
+  "experimentalOperatorPosition": "start",
+  "singleAttributePerLine": true
+}
