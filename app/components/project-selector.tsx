@@ -33,6 +33,7 @@ export default function ProjectSelector() {
   return (
     <div className="w-full h-full max-w-3xl mx-auto">
       <h1 className="text-3xl font-bold">Projects</h1>
+
       <Dialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
@@ -47,13 +48,16 @@ export default function ProjectSelector() {
           <Plus />
           {isCreating ? "Creating..." : "Create New Project"}
         </Button>
+
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Create New Project</DialogTitle>
+
             <DialogDescription>
               Enter a name for your new project.
             </DialogDescription>
           </DialogHeader>
+
           <Input
             placeholder="Project name"
             value={projectName}
@@ -67,6 +71,7 @@ export default function ProjectSelector() {
             }}
             autoFocus
           />
+
           <DialogFooter>
             <Button
               variant="outline"
@@ -78,6 +83,7 @@ export default function ProjectSelector() {
             >
               Cancel
             </Button>
+
             <Button
               className="cursor-pointer"
               onClick={handleCreate}
@@ -88,7 +94,9 @@ export default function ProjectSelector() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
       {error && <p className="mt-4 text-destructive">{error}</p>}
+
       {isLoading ?
         <p className="mt-4 text-muted-foreground">Loading projects...</p>
       : projects.length === 0 ?

@@ -41,6 +41,7 @@ export default function RootLayout({
         >
           <QueryProvider>
             <Header />
+
             {children}
           </QueryProvider>
         </ThemeProvider>

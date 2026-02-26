@@ -38,6 +38,7 @@ export default function AuthMenu() {
         >
           {session.user.email}
         </DropdownMenuTrigger>
+
         <DropdownMenuContent align="end">
           <DropdownMenuItem
             className="cursor-pointer"
@@ -62,16 +63,20 @@ export default function AuthMenu() {
         <LogIn className="size-4" />
         Login
       </DropdownMenuTrigger>
+
       <DropdownMenuContent align="end">
         <DropdownMenuGroup>
           <DropdownMenuLabel>Sign in with</DropdownMenuLabel>
+
           <DropdownMenuSeparator />
+
           <DropdownMenuItem
             className="cursor-pointer"
             onClick={() => authClient.signIn.social({ provider: "google" })}
           >
             Google
           </DropdownMenuItem>
+
           <DropdownMenuItem
             className="cursor-pointer"
             onClick={() => authClient.signIn.social({ provider: "gitlab" })}
