@@ -11,5 +11,6 @@ Assume the dev server is already running.
 Never run build or dev.
 Never run db:generate or db:push.
 Use tsc to check if project compiles.
+Always run npm run format after changing files.
 
 If anything is unclear or you need more information: Interview me.

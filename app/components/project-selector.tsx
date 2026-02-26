@@ -12,6 +12,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog"
 import { Plus } from "lucide-react"
+import Link from "next/link"
 import { useProjects } from "@/src/hooks/use-projects"
 import { MAX_CSV_SIZE } from "@/src/lib/csv-validation"
 
@@ -155,11 +156,13 @@ export default function ProjectSelector() {
         <p className="mt-4 text-muted-foreground">No projects yet</p>
       : <ul className="mt-4 space-y-2">
           {projects.map(p => (
-            <li
-              key={p.id}
-              className="rounded-md border px-4 py-3"
-            >
-              {p.name}
+            <li key={p.id}>
+              <Link
+                href={`/projects/${p.id}`}
+                className="block rounded-md border px-4 py-3 cursor-pointer hover:bg-accent"
+              >
+                {p.name}
+              </Link>
             </li>
           ))}
         </ul>
