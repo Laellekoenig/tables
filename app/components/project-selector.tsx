@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -13,21 +13,48 @@ import {
 } from "@/components/ui/dialog"
 import { Plus } from "lucide-react"
 import { useProjects } from "@/src/hooks/use-projects"
+import { MAX_CSV_SIZE } from "@/src/lib/csv-validation"
 
 export default function ProjectSelector() {
   const { projects, isLoading, error, createProject, isCreating } =
     useProjects()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [projectName, setProjectName] = useState("")
+  const [csvFile, setCsvFile] = useState<File | null>(null)
+  const [fileError, setFileError] = useState("")
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  function resetDialog() {
+    setProjectName("")
+    setCsvFile(null)
+    setFileError("")
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setFileError("")
+    const file = e.target.files?.[0] ?? null
+
+    if (file && file.size > MAX_CSV_SIZE) {
+      setFileError("File must be under 1 MB.")
+      setCsvFile(null)
+      return
+    }
+
+    setCsvFile(file)
+  }
 
   function handleCreate() {
     const trimmed = projectName.trim()
-    if (!trimmed) {
+    if (!trimmed || !csvFile) {
       return
     }
-    createProject(trimmed)
+
+    createProject({ name: trimmed, file: csvFile })
     setDialogOpen(false)
-    setProjectName("")
+    resetDialog()
   }
 
   return (
@@ -36,7 +63,12 @@ export default function ProjectSelector() {
 
       <Dialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={open => {
+          setDialogOpen(open)
+          if (!open) {
+            resetDialog()
+          }
+        }}
       >
         <Button
           className="mt-4 cursor-pointer"
@@ -54,7 +86,7 @@ export default function ProjectSelector() {
             <DialogTitle>Create New Project</DialogTitle>
 
             <DialogDescription>
-              Enter a name for your new project.
+              Enter a name and upload a CSV file for your new project.
             </DialogDescription>
           </DialogHeader>
 
@@ -72,13 +104,33 @@ export default function ProjectSelector() {
             autoFocus
           />
 
+          <div className="flex flex-col gap-2">
+            <Input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv,text/csv"
+              className="cursor-pointer"
+              onChange={handleFileChange}
+            />
+
+            {csvFile && (
+              <p className="text-sm text-muted-foreground">
+                {csvFile.name} ({(csvFile.size / 1024).toFixed(1)} KB)
+              </p>
+            )}
+
+            {fileError && (
+              <p className="text-sm text-destructive">{fileError}</p>
+            )}
+          </div>
+
           <DialogFooter>
             <Button
               variant="outline"
               className="cursor-pointer"
               onClick={() => {
                 setDialogOpen(false)
-                setProjectName("")
+                resetDialog()
               }}
             >
               Cancel
@@ -87,7 +139,7 @@ export default function ProjectSelector() {
             <Button
               className="cursor-pointer"
               onClick={handleCreate}
-              disabled={!projectName.trim() || isCreating}
+              disabled={!projectName.trim() || !csvFile || isCreating}
             >
               {isCreating ? "Creating..." : "Create"}
             </Button>

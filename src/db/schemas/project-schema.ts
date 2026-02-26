@@ -6,6 +6,7 @@ export const project = pgTable(
   {
     id: text("id").primaryKey(),
     name: text("name").notNull(),
+    csvContent: text("csv_content").notNull(),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),

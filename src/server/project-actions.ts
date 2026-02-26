@@ -6,6 +6,10 @@ import { db } from "@/src/db"
 import { project } from "@/src/db/schemas/project-schema"
 import { ActionResult } from "@/src/types/action-result"
 import { getAuthedSession } from "./auth-helper"
+import {
+  type CreateProjectInput,
+  validateCreateProjectInput,
+} from "@/src/lib/csv-validation"
 
 export type Project = typeof project.$inferSelect
 
@@ -34,13 +38,19 @@ export async function serverGetProjects(): Promise<ActionResult<Project[]>> {
 }
 
 export async function serverNewProject(
-  name: string,
+  input: CreateProjectInput,
 ): Promise<ActionResult<Project>> {
   const sessionResult = await getAuthedSession()
   if (sessionResult.isErr()) {
     return { ok: false, error: "Not signed-in" }
   }
 
+  const validationResult = validateCreateProjectInput(input)
+  if (validationResult.isErr()) {
+    return { ok: false, error: validationResult.error }
+  }
+
+  const { name, csvContent } = validationResult.value
   const session = sessionResult.value
   const id = crypto.randomUUID()
 
@@ -50,6 +60,7 @@ export async function serverNewProject(
       .values({
         id,
         name,
+        csvContent,
         userId: session.user.id,
       })
       .returning(),

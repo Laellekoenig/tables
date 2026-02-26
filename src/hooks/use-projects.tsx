@@ -7,14 +7,20 @@ import {
   serverNewProject,
   type Project,
 } from "@/src/server/project-actions"
+import { type CreateProjectInput } from "@/src/lib/csv-validation"
 
 const PROJECTS_KEY = ["projects"]
+
+interface CreateProjectFields {
+  name: string
+  file: File
+}
 
 interface ProjectsContextValue {
   projects: Project[]
   isLoading: boolean
   error: string | null
-  createProject: (name: string) => void
+  createProject: (fields: CreateProjectFields) => void
   isCreating: boolean
 }
 
@@ -35,21 +41,29 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
   })
 
   const mutation = useMutation({
-    mutationFn: async (name: string) => {
-      const result = await serverNewProject(name)
+    mutationFn: async (fields: CreateProjectFields) => {
+      const csvContent = await fields.file.text()
+
+      const input: CreateProjectInput = {
+        name: fields.name,
+        csvContent,
+      }
+
+      const result = await serverNewProject(input)
       if (!result.ok) {
         throw new Error(result.error)
       }
       return result.value
     },
-    onMutate: async (name: string) => {
+    onMutate: async (fields: CreateProjectFields) => {
       await queryClient.cancelQueries({ queryKey: PROJECTS_KEY })
 
       const previous = queryClient.getQueryData<Project[]>(PROJECTS_KEY)
 
       const placeholder: Project = {
         id: crypto.randomUUID(),
-        name,
+        name: fields.name,
+        csvContent: "",
         userId: "",
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -76,8 +90,8 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
     projects: query.data ?? [],
     isLoading: query.isLoading,
     error: query.error ? query.error.message : null,
-    createProject: (name: string) => {
-      mutation.mutate(name)
+    createProject: (fields: CreateProjectFields) => {
+      mutation.mutate(fields)
     },
     isCreating: mutation.isPending,
   }
