@@ -2,5 +2,5 @@
   "version": "0.2",
   "language": "en",
   "ignorePaths": ["drizzle", "node_modules"],
-  "words": ["neverthrow"]
+  "words": ["neverthrow", "papaparse"]
 }
