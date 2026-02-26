@@ -15,6 +15,20 @@
       "when": 1771946554169,
       "tag": "0001_wandering_miss_america",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1771953282913,
+      "tag": "0002_optimal_doorman",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1772015127996,
+      "tag": "0003_ambiguous_lord_tyger",
+      "breakpoints": true
     }
   ]
 }
