@@ -33,7 +33,9 @@ export async function serverGetProjects(): Promise<ActionResult<Project[]>> {
   return { ok: true, value: dbResult.value }
 }
 
-export async function serverNewProject(): Promise<ActionResult<Project>> {
+export async function serverNewProject(
+  name: string,
+): Promise<ActionResult<Project>> {
   const sessionResult = await getAuthedSession()
   if (sessionResult.isErr()) {
     return { ok: false, error: "Not signed-in" }
@@ -47,7 +49,7 @@ export async function serverNewProject(): Promise<ActionResult<Project>> {
       .insert(project)
       .values({
         id,
-        name: "Untitled Project",
+        name,
         userId: session.user.id,
       })
       .returning(),

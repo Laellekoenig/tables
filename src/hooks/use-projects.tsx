@@ -14,7 +14,7 @@ interface ProjectsContextValue {
   projects: Project[]
   isLoading: boolean
   error: string | null
-  createProject: () => void
+  createProject: (name: string) => void
   isCreating: boolean
 }
 
@@ -35,21 +35,21 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
   })
 
   const mutation = useMutation({
-    mutationFn: async () => {
-      const result = await serverNewProject()
+    mutationFn: async (name: string) => {
+      const result = await serverNewProject(name)
       if (!result.ok) {
         throw new Error(result.error)
       }
       return result.value
     },
-    onMutate: async () => {
+    onMutate: async (name: string) => {
       await queryClient.cancelQueries({ queryKey: PROJECTS_KEY })
 
       const previous = queryClient.getQueryData<Project[]>(PROJECTS_KEY)
 
       const placeholder: Project = {
         id: crypto.randomUUID(),
-        name: "Untitled Project",
+        name,
         userId: "",
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -76,8 +76,8 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
     projects: query.data ?? [],
     isLoading: query.isLoading,
     error: query.error ? query.error.message : null,
-    createProject: () => {
-      mutation.mutate()
+    createProject: (name: string) => {
+      mutation.mutate(name)
     },
     isCreating: mutation.isPending,
   }
