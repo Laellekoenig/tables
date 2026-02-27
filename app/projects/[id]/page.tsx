@@ -1,6 +1,12 @@
 import { serverGetProject } from "@/src/server/project-actions"
 import { parseCsv } from "@/src/lib/csv-parsing"
-import { DataTable } from "@/app/components/data-table"
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable"
+import { ProjectLeftPanel } from "@/app/components/project-left-panel"
+import { ProjectRightPanel } from "@/app/components/project-right-panel"
 
 export default async function ProjectPage({
   params,
@@ -30,18 +36,22 @@ export default async function ProjectPage({
     )
   }
 
-  const { headers, rows } = csvResult.value
-
   return (
-    <div className="w-full h-full p-4">
-      <h1 className="text-3xl font-bold">{result.value.name}</h1>
+    <div className="w-full h-[var(--content-height)]">
+      <ResizablePanelGroup orientation="horizontal">
+        <ResizablePanel defaultSize="75%">
+          <ProjectLeftPanel
+            project={result.value}
+            csv={csvResult.value}
+          />
+        </ResizablePanel>
 
-      <div className="mt-4">
-        <DataTable
-          headers={headers}
-          rows={rows}
-        />
-      </div>
+        <ResizableHandle withHandle />
+
+        <ResizablePanel defaultSize="25%">
+          <ProjectRightPanel />
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </div>
   )
 }
