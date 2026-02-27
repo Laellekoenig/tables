@@ -4,7 +4,8 @@
       "Bash(npx tsc:*)",
       "Bash(ls:*)",
       "Bash(head:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(cat:*)"
     ]
   }
 }

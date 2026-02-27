@@ -1,7 +1,16 @@
 import { NextResponse } from "next/server"
 import { err, ok, Result, ResultAsync } from "neverthrow"
 
+import { safeGenerateText } from "@/src/lib/safe-generate"
 import { getAuthedSession } from "@/src/server/auth-helper"
+
+const SYSTEM_PROMPT = `You are a data transformation assistant. Generate a Python script that:
+- Imports pandas and numpy
+- Reads a CSV file from "data.csv" using pandas
+- Applies the transformation described by the user
+- Saves the transformed data to "transformed.csv" using pandas
+
+Output ONLY the Python script. No markdown, no explanations, no code fences.`
 
 interface TransformRequest {
   prompt: string
@@ -36,6 +45,14 @@ export async function POST(request: Request) {
   console.log(
     `[transform] user=${userId} project=${projectId} prompt="${prompt}"`,
   )
+
+  const generateResult = await safeGenerateText(SYSTEM_PROMPT, prompt)
+
+  if (generateResult.isErr()) {
+    return NextResponse.json({ error: generateResult.error }, { status: 500 })
+  }
+
+  console.log(`[transform] generated script:\n${generateResult.value}`)
 
   return NextResponse.json({ message: "ok" }, { status: 200 })
 }

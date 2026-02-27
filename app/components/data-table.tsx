@@ -39,7 +39,15 @@ export function DataTable({ headers, rows }: DataTableProps) {
               {headerGroup.headers.map(header => (
                 <th
                   key={header.id}
-                  className="px-4 py-2 text-left font-medium text-muted-foreground"
+                  draggable={!header.isPlaceholder}
+                  onDragStart={e => {
+                    e.dataTransfer.setData(
+                      "text/plain",
+                      `{${header.column.id}}`,
+                    )
+                    e.dataTransfer.effectAllowed = "copy"
+                  }}
+                  className="px-4 py-2 text-left font-medium text-muted-foreground cursor-grab active:cursor-grabbing select-none"
                 >
                   {header.isPlaceholder ? null : (
                     flexRender(
