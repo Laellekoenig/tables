@@ -6,6 +6,7 @@ Rules for this project:
 - The components in /ui are shadcn components based on base ui
 - Do not use standard ts error handling where possible. Use neverthrow instead and create safe wrapped versions of used library functions.
 - When HTML elements are on same indentation level, leave empty line between them for better readability
+- Helper functions are below the main export functions in the code
 
 Assume the dev server is already running.
 Never run build or dev.

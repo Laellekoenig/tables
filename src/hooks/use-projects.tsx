@@ -2,11 +2,9 @@
 
 import { createContext, useContext } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import {
-  serverGetProjects,
-  serverNewProject,
-  type Project,
-} from "@/src/server/project-actions"
+import { serverGetProjects } from "@/src/server/get-projects"
+import { serverNewProject } from "@/src/server/new-project"
+import { type Project } from "@/src/server/get-project"
 import { type CreateProjectInput } from "@/src/lib/csv-validation"
 
 const PROJECTS_KEY = ["projects"]

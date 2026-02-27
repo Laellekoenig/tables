@@ -36,6 +36,20 @@
       "when": 1772143499702,
       "tag": "0004_third_talon",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1772197684805,
+      "tag": "0005_nosy_greymalkin",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1772201646838,
+      "tag": "0006_massive_johnny_storm",
+      "breakpoints": true
     }
   ]
 }

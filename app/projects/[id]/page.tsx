@@ -1,4 +1,5 @@
-import { serverGetProject } from "@/src/server/project-actions"
+import { serverGetProject } from "@/src/server/get-project"
+import { serverGetTransformationTree } from "@/src/server/get-transformation-tree"
 import { parseCsv } from "@/src/lib/csv-parsing"
 import {
   ResizableHandle,
@@ -37,11 +38,15 @@ export default async function ProjectPage({
     )
   }
 
+  const treeResult = await serverGetTransformationTree(id)
+  const transformationTree = treeResult.ok ? treeResult.value : []
+
   return (
     <div className="w-full h-[var(--content-height)]">
       <ProjectProvider
         project={projectResult.value}
         csv={csvResult.value}
+        transformationTree={transformationTree}
       >
         <ResizablePanelGroup orientation="horizontal">
           <ResizablePanel defaultSize="75%">
