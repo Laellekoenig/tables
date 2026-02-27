@@ -14,6 +14,8 @@ export const env = createEnv({
     GOOGLE_CLIENT_SECRET: z.string().min(1),
 
     OPENROUTER_API_KEY: z.string().min(1),
+
+    DAYTONA_API_KEY: z.string().min(1),
   },
   client: {
     NEXT_PUBLIC_BETTER_AUTH_URL: z.url(),
