@@ -7,8 +7,10 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { safeFetch } from "@/src/lib/safe-fetch"
+import { useProject } from "@/src/hooks/use-project"
 
-export function ProjectRightPanel({ projectId }: { projectId: string }) {
+export function ProjectRightPanel() {
+  const { project } = useProject()
   const [prompt, setPrompt] = useState("")
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -21,7 +23,7 @@ export function ProjectRightPanel({ projectId }: { projectId: string }) {
     const result = await safeFetch("/api/transform", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt, projectId }),
+      body: JSON.stringify({ prompt, projectId: project.id }),
     })
 
     if (result.isOk()) {

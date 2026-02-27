@@ -1,14 +1,10 @@
-import { ParsedCsv } from "@/src/lib/csv-parsing"
-import { DataTable } from "./data-table"
-import { Project } from "@/src/server/project-actions"
+"use client"
 
-export function ProjectLeftPanel({
-  project,
-  csv,
-}: {
-  project: Project
-  csv: ParsedCsv
-}) {
+import { DataTable } from "./data-table"
+import { useProject } from "@/src/hooks/use-project"
+
+export function ProjectLeftPanel() {
+  const { project, csv } = useProject()
   const { headers, rows } = csv
 
   return (
