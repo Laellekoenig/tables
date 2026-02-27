@@ -1,18 +1,17 @@
 "use client"
 
 import {
-  type Dispatch,
-  type SetStateAction,
+  createContext,
+  useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
+  type Dispatch,
+  type SetStateAction,
 } from "react"
-
-import { Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-
-import { Button } from "@/components/ui/button"
 import {
   safeCreateEventSource,
   safeParseJson,
@@ -28,8 +27,6 @@ import {
   type Transformation,
   type TransformationTree,
 } from "@/src/server/transformation-helpers"
-import { type PromptEditorHandle, PromptEditor } from "./prompt-editor"
-import { TransformationCard } from "./transformation-card"
 
 interface LiveTransformation {
   transformation: Transformation
@@ -59,7 +56,23 @@ interface RenderedTransformation {
   orderingTimestamp: number
 }
 
-export function ProjectLeftPanel() {
+interface ProjectLeftPanelContextValue {
+  isSubmitting: boolean
+  renderedTransformations: RenderedTransformation[]
+  approvalLoadingById: Record<string, boolean>
+  submitPrompt: (prompt: string) => Promise<boolean>
+  acceptExecution: (transformation: Transformation) => Promise<void>
+  declineExecution: (transformation: Transformation) => Promise<void>
+}
+
+const ProjectLeftPanelContext =
+  createContext<ProjectLeftPanelContextValue | null>(null)
+
+export function ProjectLeftPanelProvider({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   const { project, transformationTree } = useProject()
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -69,10 +82,10 @@ export function ProjectLeftPanel() {
   const [approvalLoadingById, setApprovalLoadingById] = useState<
     Record<string, boolean>
   >({})
-  const editorRef = useRef<PromptEditorHandle>(null)
-  const formRef = useRef<HTMLFormElement>(null)
   const streamsRef = useRef<Map<string, EventSource>>(new Map())
-  const persistedTransformations = flattenTree(transformationTree)
+  const persistedTransformations = useMemo(() => {
+    return flattenTree(transformationTree)
+  }, [transformationTree])
 
   useEffect(() => {
     return () => {
@@ -84,16 +97,10 @@ export function ProjectLeftPanel() {
     }
   }, [])
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-
-    if (!editorRef.current) {
-      return
-    }
-
-    const prompt = editorRef.current.serialize().trim()
+  async function submitPrompt(rawPrompt: string): Promise<boolean> {
+    const prompt = rawPrompt.trim()
     if (!prompt) {
-      return
+      return false
     }
 
     const parentId = getLatestCompletedTransformationId(
@@ -138,10 +145,8 @@ export function ProjectLeftPanel() {
         return previous.filter(item => item.transformation.id !== tempId)
       })
       toast.error(createResult.error)
-      return
+      return false
     }
-
-    editorRef.current.clear()
 
     setLiveTransformations(previous => {
       const withoutTemp = previous.filter(
@@ -189,9 +194,11 @@ export function ProjectLeftPanel() {
       closeStream(createResult.value.id)
       router.refresh()
     })
+
+    return true
   }
 
-  async function handleAcceptExecution(transformation: Transformation) {
+  async function acceptExecution(transformation: Transformation) {
     setApprovalLoading(transformation.id, true)
     ensureProgressStream(transformation.id, transformation.createdAt.getTime())
 
@@ -222,7 +229,7 @@ export function ProjectLeftPanel() {
     )
   }
 
-  async function handleDeclineExecution(transformation: Transformation) {
+  async function declineExecution(transformation: Transformation) {
     setApprovalLoading(transformation.id, true)
     ensureProgressStream(transformation.id, transformation.createdAt.getTime())
 
@@ -365,86 +372,38 @@ export function ProjectLeftPanel() {
     })
   }
 
-  const renderedTransformations = getRenderedTransformations(
-    persistedTransformations,
-    liveTransformations,
-  )
+  const renderedTransformations = useMemo(() => {
+    return getRenderedTransformations(
+      persistedTransformations,
+      liveTransformations,
+    )
+  }, [persistedTransformations, liveTransformations])
+
+  const value: ProjectLeftPanelContextValue = {
+    isSubmitting,
+    renderedTransformations,
+    approvalLoadingById,
+    submitPrompt,
+    acceptExecution,
+    declineExecution,
+  }
 
   return (
-    <div>
-      <div className="w-full p-6 border-b">
-        <h1 className="font-bold text-2xl">{project.name}</h1>
-      </div>
-
-      <form
-        ref={formRef}
-        onSubmit={handleSubmit}
-        className="bg-background/95 flex flex-col gap-2 p-6 border-b"
-      >
-        <PromptEditor
-          ref={editorRef}
-          disabled={isSubmitting}
-          onRequestSubmit={() => {
-            formRef.current?.requestSubmit()
-          }}
-        />
-
-        <Button
-          type="submit"
-          disabled={isSubmitting}
-          className="cursor-pointer self-end"
-        >
-          {isSubmitting ?
-            <Loader2 className="animate-spin" />
-          : "Submit"}
-        </Button>
-      </form>
-
-      <div></div>
-    </div>
+    <ProjectLeftPanelContext.Provider value={value}>
+      {children}
+    </ProjectLeftPanelContext.Provider>
   )
+}
 
-  return (
-    <div className="relative flex h-full min-h-0 flex-col p-8">
-      {renderedTransformations.length > 0 && (
-        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-44 scrollbar-hide [scrollbar-gutter:stable]">
-          {renderedTransformations.map(item => (
-            <div
-              key={item.transformation.id}
-              className="flex flex-col gap-2"
-            >
-              <TransformationCard
-                transformation={item.transformation}
-                approval={
-                  item.needsApproval ?
-                    {
-                      isLoading: Boolean(
-                        approvalLoadingById[item.transformation.id],
-                      ),
-                      onAccept: () => {
-                        void handleAcceptExecution(item.transformation)
-                      },
-                      onDecline: () => {
-                        void handleDeclineExecution(item.transformation)
-                      },
-                    }
-                  : undefined
-                }
-              />
+export function useProjectLeftPanel(): ProjectLeftPanelContextValue {
+  const context = useContext(ProjectLeftPanelContext)
+  if (!context) {
+    throw new Error(
+      "useProjectLeftPanel must be used within a ProjectLeftPanelProvider",
+    )
+  }
 
-              {item.showSpinner && (
-                <div className="text-muted-foreground flex items-center gap-2 pl-2 text-xs">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-
-                  <p>{item.phase}</p>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
+  return context
 }
 
 function flattenTree(tree: TransformationTree[]): Transformation[] {

@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import Header from "./components/header"
+import Header from "@/components/header"
 import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "next-themes"

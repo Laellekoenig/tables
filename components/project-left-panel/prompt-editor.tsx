@@ -64,7 +64,7 @@ export const PromptEditor = forwardRef<PromptEditorHandle, PromptEditorProps>(
             return
           }
 
-          const range = document.caretRangeFromPoint(e.clientX, e.clientY)
+          const range = getDropRange(editorRef.current, e.clientX, e.clientY)
           if (!range) {
             return
           }
@@ -107,4 +107,50 @@ function serializeEditor(element: HTMLElement): string {
     }
   }
   return result
+}
+
+function getDropRange(
+  editorElement: HTMLDivElement | null,
+  clientX: number,
+  clientY: number,
+): Range | null {
+  if (!editorElement) {
+    return null
+  }
+
+  const documentWithCaretPosition = document as Document & {
+    caretPositionFromPoint?: (
+      x: number,
+      y: number,
+    ) => {
+      offsetNode: Node
+      offset: number
+    } | null
+  }
+
+  if (documentWithCaretPosition.caretPositionFromPoint) {
+    const caretPosition = documentWithCaretPosition.caretPositionFromPoint(
+      clientX,
+      clientY,
+    )
+    if (caretPosition && editorElement.contains(caretPosition.offsetNode)) {
+      const pointRange = document.createRange()
+      pointRange.setStart(caretPosition.offsetNode, caretPosition.offset)
+      pointRange.collapse(true)
+      return pointRange
+    }
+  }
+
+  const selection = window.getSelection()
+  if (selection && selection.rangeCount > 0) {
+    const selectionRange = selection.getRangeAt(0)
+    if (editorElement.contains(selectionRange.commonAncestorContainer)) {
+      return selectionRange.cloneRange()
+    }
+  }
+
+  const endRange = document.createRange()
+  endRange.selectNodeContents(editorElement)
+  endRange.collapse(false)
+  return endRange
 }

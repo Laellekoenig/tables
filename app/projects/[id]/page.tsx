@@ -6,8 +6,8 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable"
-import { ProjectRightPanel } from "@/app/components/project-right-panel"
-import { ProjectLeftPanel } from "@/app/components/project-left-panel"
+import { ProjectRightPanel } from "@/components/project-right-panel"
+import { ProjectLeftPanel } from "@/components/project-left-panel"
 import { ProjectProvider } from "@/src/hooks/use-project"
 
 export default async function ProjectPage({

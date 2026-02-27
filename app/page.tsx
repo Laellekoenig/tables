@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { authClient } from "@/src/client/auth-client"
-import ProjectSelector from "@/app/components/project-selector"
+import ProjectSelector from "@/components/project-selector"
 import { ProjectsProvider } from "@/src/hooks/use-projects"
 
 export default function Home() {
