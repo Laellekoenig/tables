@@ -6,6 +6,11 @@ export interface ParsedCsv {
   rows: Record<string, string>[]
 }
 
+export function csvSampleLines(csvText: string, rowCount: number = 3): string {
+  const lines = csvText.split("\n").filter(line => line.trim() !== "")
+  return lines.slice(0, rowCount + 1).join("\n")
+}
+
 export function parseCsv(csvText: string): Result<ParsedCsv, string> {
   if (!csvText.trim()) {
     return err("CSV content is empty.")

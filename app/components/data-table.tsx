@@ -31,7 +31,7 @@ export function DataTable({ headers, rows }: DataTableProps) {
   })
 
   return (
-    <div className="overflow-auto scrollbar-hide rounded-lg border border-border min-h-0 flex-1">
+    <div className="overflow-auto min-h-0 flex-1">
       <table className="w-full text-sm">
         <thead className="bg-muted sticky top-0 z-10">
           {table.getHeaderGroups().map(headerGroup => (

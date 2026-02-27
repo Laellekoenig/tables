@@ -26,8 +26,14 @@ const statusVariantMap = {
 
 export function TransformationCard({
   transformation,
+  approval,
 }: {
   transformation: Transformation
+  approval?: {
+    isLoading: boolean
+    onAccept: () => void
+    onDecline: () => void
+  }
 }) {
   const router = useRouter()
   const variant = statusVariantMap[transformation.status]
@@ -35,7 +41,7 @@ export function TransformationCard({
   return (
     <Card
       size="sm"
-      className="border border-border ring-0"
+      className="border border-border ring-0 transition-colors"
     >
       <CardHeader>
         <CardTitle className="text-sm line-clamp-1">
@@ -54,7 +60,10 @@ export function TransformationCard({
             variant="ghost"
             size="icon-xs"
             className="cursor-pointer"
-            onClick={() => handleDelete(transformation.id, router)}
+            onClick={e => {
+              e.stopPropagation()
+              handleDelete(transformation.id, router)
+            }}
           >
             <Trash2 />
           </Button>
@@ -63,7 +72,7 @@ export function TransformationCard({
 
       {transformation.codeSnippet && (
         <CardContent>
-          <pre className="overflow-x-auto overflow-y-auto max-h-48 rounded-xl bg-muted p-3 text-xs font-mono">
+          <pre className="max-h-48 overflow-x-auto overflow-y-auto rounded-xl bg-muted p-3 font-mono text-xs scrollbar-hide [scrollbar-gutter:stable]">
             {transformation.codeSnippet}
           </pre>
         </CardContent>
@@ -74,6 +83,35 @@ export function TransformationCard({
           <p className="text-destructive text-xs">
             {transformation.errorMessage}
           </p>
+        </CardContent>
+      )}
+
+      {approval && (
+        <CardContent className="flex items-center justify-start gap-2">
+          <Button
+            size="sm"
+            disabled={approval.isLoading}
+            className="cursor-pointer"
+            onClick={() => {
+              approval.onAccept()
+            }}
+          >
+            {approval.isLoading ?
+              <Loader2 className="animate-spin" />
+            : "Accept"}
+          </Button>
+
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={approval.isLoading}
+            className="cursor-pointer"
+            onClick={() => {
+              approval.onDecline()
+            }}
+          >
+            Decline
+          </Button>
         </CardContent>
       )}
     </Card>
