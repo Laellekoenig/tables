@@ -49,7 +49,7 @@ export default async function ProjectPage({
         <ResizableHandle withHandle />
 
         <ResizablePanel defaultSize="25%">
-          <ProjectRightPanel />
+          <ProjectRightPanel projectId={id} />
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
