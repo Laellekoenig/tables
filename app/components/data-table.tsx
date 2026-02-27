@@ -42,6 +42,10 @@ export function DataTable({ headers, rows }: DataTableProps) {
                   draggable={!header.isPlaceholder}
                   onDragStart={e => {
                     e.dataTransfer.setData(
+                      "application/x-column",
+                      header.column.id,
+                    )
+                    e.dataTransfer.setData(
                       "text/plain",
                       `{${header.column.id}}`,
                     )

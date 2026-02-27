@@ -14,10 +14,13 @@ export function safeGenerateText(
 ): ResultAsync<string, string> {
   return ResultAsync.fromPromise(
     generateText({
-      model: openrouter("openai/gpt-5.3-codex"),
+      model: openrouter("openai/gpt-5.2-codex"),
       system: systemPrompt,
       prompt: userPrompt,
     }).then(result => result.text),
-    () => "Failed to generate text.",
+    (error: unknown) => {
+      console.error("[safeGenerateText] Generation failed:", error)
+      return "Failed to generate text."
+    },
   )
 }

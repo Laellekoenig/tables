@@ -6,21 +6,25 @@ import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
 import { safeFetch } from "@/src/lib/safe-fetch"
 import { useProject } from "@/src/hooks/use-project"
 
 export function ProjectRightPanel() {
   const { project } = useProject()
-  const [prompt, setPrompt] = useState("")
   const [isDragOver, setIsDragOver] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const editorRef = useRef<HTMLDivElement>(null)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
 
-    if (!prompt.trim()) {
+    const editor = editorRef.current
+    if (!editor) {
+      return
+    }
+
+    const prompt = serializeEditor(editor).trim()
+    if (!prompt) {
       return
     }
 
@@ -35,7 +39,7 @@ export function ProjectRightPanel() {
     setIsLoading(false)
 
     if (result.isOk()) {
-      setPrompt("")
+      editor.innerHTML = ""
     } else {
       toast.error(result.error)
     }
@@ -47,17 +51,14 @@ export function ProjectRightPanel() {
         onSubmit={handleSubmit}
         className="flex flex-col gap-2"
       >
-        <Textarea
-          ref={textareaRef}
-          value={prompt}
-          disabled={isLoading}
-          onChange={e => {
-            setPrompt(e.target.value)
-          }}
+        <div
+          ref={editorRef}
+          contentEditable={!isLoading}
+          data-placeholder="Explain transformation..."
           onKeyDown={e => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault()
-              e.currentTarget.form?.requestSubmit()
+              e.currentTarget.closest("form")?.requestSubmit()
             }
           }}
           onDragOver={e => {
@@ -73,27 +74,35 @@ export function ProjectRightPanel() {
           onDrop={e => {
             e.preventDefault()
             setIsDragOver(false)
-            const droppedText = e.dataTransfer.getData("text/plain")
-            if (!droppedText) {
+            const columnName = e.dataTransfer.getData("application/x-column")
+            if (!columnName) {
               return
             }
-            const textarea = textareaRef.current
-            if (!textarea) {
+
+            const range = document.caretRangeFromPoint(e.clientX, e.clientY)
+            if (!range) {
               return
             }
-            const cursorPos = textarea.selectionStart
-            const newValue =
-              prompt.slice(0, cursorPos) + droppedText + prompt.slice(cursorPos)
-            setPrompt(newValue)
-            requestAnimationFrame(() => {
-              textarea.focus()
-              const newCursorPos = cursorPos + droppedText.length
-              textarea.setSelectionRange(newCursorPos, newCursorPos)
-            })
+
+            const badge = document.createElement("span")
+            badge.contentEditable = "false"
+            badge.dataset.column = columnName
+            badge.textContent = columnName
+            badge.className =
+              "inline-flex items-center rounded-4xl bg-primary text-primary-foreground px-2 py-0.5 text-xs font-medium cursor-default mx-0.5 align-baseline"
+
+            range.insertNode(badge)
+            range.setStartAfter(badge)
+            range.collapse(true)
+            const selection = window.getSelection()
+            selection?.removeAllRanges()
+            selection?.addRange(range)
           }}
-          className={isDragOver ? "border-primary ring-2 ring-primary/30" : ""}
-          placeholder="Explain transformation..."
-        />
+          suppressContentEditableWarning
+          className={`border-input bg-input/30 focus-visible:border-ring focus-visible:ring-ring/50 rounded-xl border px-3 py-3 text-base transition-colors focus-visible:ring-[3px] md:text-sm min-h-16 w-full outline-none whitespace-pre-wrap break-words ${
+            isDragOver ? "border-primary ring-2 ring-primary/30" : ""
+          } ${isLoading ? "cursor-not-allowed opacity-50" : ""}`}
+        ></div>
 
         <Button
           type="submit"
@@ -107,4 +116,25 @@ export function ProjectRightPanel() {
       </form>
     </div>
   )
+}
+
+function serializeEditor(element: HTMLElement): string {
+  let result = ""
+  for (const node of element.childNodes) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      result += node.textContent ?? ""
+    } else if (node instanceof HTMLElement) {
+      if (node.dataset.column) {
+        result += `{${node.dataset.column}}`
+      } else if (node.tagName === "BR") {
+        result += "\n"
+      } else {
+        if (result.length > 0 && !result.endsWith("\n")) {
+          result += "\n"
+        }
+        result += serializeEditor(node)
+      }
+    }
+  }
+  return result
 }
