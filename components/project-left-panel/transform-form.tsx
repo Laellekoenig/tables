@@ -1,0 +1,113 @@
+"use client"
+
+import { useEffect, useRef, useState } from "react"
+import { ArrowUp, Loader2 } from "lucide-react"
+import { toast } from "sonner"
+import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
+import { safeFetch } from "@/src/lib/safe-fetch"
+
+export function TransformForm() {
+  const [text, setText] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const formRef = useRef<HTMLFormElement | null>(null)
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+
+  useEffect(() => {
+    resizeTextarea(textareaRef.current)
+  }, [text])
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    const trimmedText = text.trim()
+    if (!trimmedText) {
+      return
+    }
+
+    setIsSubmitting(true)
+
+    const responseResult = await safeFetch("/api/transform", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ text: trimmedText }),
+    })
+
+    if (responseResult.isErr()) {
+      toast.error(responseResult.error)
+      setIsSubmitting(false)
+      return
+    }
+
+    setText("")
+    setIsSubmitting(false)
+  }
+
+  return (
+    <form
+      ref={formRef}
+      onSubmit={handleSubmit}
+      className="-mx-6 w-[calc(100%+3rem)] border-b border-border/70 p-6"
+    >
+      <div className="space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+          Transform input
+        </p>
+      </div>
+
+      <div className="mt-4">
+        <Textarea
+          ref={textareaRef}
+          value={text}
+          onChange={event => setText(event.target.value)}
+          onKeyDown={event => handleTextareaKeyDown(event, formRef.current)}
+          rows={1}
+          placeholder="Describe the transformation you want to run..."
+          disabled={isSubmitting}
+          className="resize-none overflow-hidden border-border/70 bg-background/80"
+        />
+      </div>
+
+      <div className="mt-4 flex items-center justify-end gap-3">
+        <Button
+          type="submit"
+          size="icon"
+          disabled={isSubmitting || !text.trim()}
+          className="cursor-pointer"
+          aria-label="Submit"
+        >
+          {isSubmitting ?
+            <Loader2 className="animate-spin" />
+          : <ArrowUp />}
+        </Button>
+      </div>
+    </form>
+  )
+}
+
+function resizeTextarea(textarea: HTMLTextAreaElement | null): void {
+  if (!textarea) {
+    return
+  }
+
+  textarea.style.height = "auto"
+  textarea.style.height = `${textarea.scrollHeight}px`
+}
+
+function handleTextareaKeyDown(
+  event: React.KeyboardEvent<HTMLTextAreaElement>,
+  form: HTMLFormElement | null,
+): void {
+  if (event.key !== "Enter") {
+    return
+  }
+
+  if (event.shiftKey) {
+    return
+  }
+
+  event.preventDefault()
+  form?.requestSubmit()
+}
