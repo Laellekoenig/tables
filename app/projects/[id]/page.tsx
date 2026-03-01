@@ -44,7 +44,11 @@ export default async function ProjectPage({
         csv={csvResult.value}
       >
         <ResizablePanelGroup orientation="horizontal">
-          <ResizablePanel defaultSize="35%">
+          <ResizablePanel
+            defaultSize="35%"
+            minSize="25%"
+            className="min-w-[22rem]"
+          >
             <ProjectLeftPanel />
           </ResizablePanel>
 

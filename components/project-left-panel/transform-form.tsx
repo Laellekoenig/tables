@@ -43,7 +43,7 @@ export function TransformForm() {
     <form
       ref={formRef}
       onSubmit={handleSubmit}
-      className="-mx-6 border-b border-border/70 px-6 pb-6 pt-4"
+      className="-mx-6 border-b border-border/70 px-6 pb-4 pt-4"
     >
       <div className="space-y-2">
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
