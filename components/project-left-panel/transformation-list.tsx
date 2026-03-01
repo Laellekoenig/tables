@@ -20,6 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { PythonCodeBlock } from "@/components/python-code-block"
 
 export function TransformationList() {
   const {
@@ -182,7 +183,7 @@ function TransformationCard({
       {transformation.errorMessage || hasCode ?
         <CardContent className="space-y-4">
           {hasCode ?
-            <TransformationCodeBlock code={transformation.code ?? ""} />
+            <PythonCodeBlock code={transformation.code ?? ""} />
           : null}
 
           {transformation.errorMessage ?
@@ -231,20 +232,6 @@ function TransformationCardHeader({
           {getTransformationStateLabel(transformation)}
         </Badge>
       </div>
-    </div>
-  )
-}
-
-function TransformationCodeBlock({ code }: { code: string }) {
-  return (
-    <div className="space-y-2">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-        Generated code
-      </p>
-
-      <pre className="overflow-x-auto rounded-xl border border-border/70 bg-muted/30 px-4 py-3 font-mono text-xs leading-6 text-foreground">
-        <code>{code}</code>
-      </pre>
     </div>
   )
 }
