@@ -23,7 +23,7 @@ export function TransformationList() {
   const { transformations, isLoading, error } = useTransformations()
 
   return (
-    <section className="-mx-6 flex min-h-0 flex-1 flex-col overflow-hidden px-6 py-6">
+    <section className="-mx-6 flex min-h-0 flex-1 flex-col overflow-hidden px-6 pb-6 pt-4">
       <TransformationListHeader count={transformations.length} />
 
       {error ?

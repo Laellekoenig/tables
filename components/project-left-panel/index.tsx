@@ -13,15 +13,17 @@ export function ProjectLeftPanel() {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-gradient-to-b from-background via-background to-muted/20">
-      <div className="w-full border-b border-border/70 p-6">
-        <div className="flex flex-col">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-            Project
-          </p>
+      <div className="w-full border-b border-border/70 px-6 pb-6 pt-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+              Project
+            </p>
 
-          <h1 className="mt-3 text-2xl font-bold tracking-tight">
-            {project.name}
-          </h1>
+            <h1 className="mt-3 text-2xl font-bold tracking-tight">
+              {project.name}
+            </h1>
+          </div>
 
           <Link
             href="/"
@@ -29,11 +31,11 @@ export function ProjectLeftPanel() {
               variant: "ghost",
               size: "sm",
               className:
-                "mt-3 w-fit cursor-pointer text-muted-foreground hover:text-foreground/80",
+                "w-fit shrink-0 cursor-pointer text-muted-foreground hover:text-foreground/80",
             })}
           >
             <ArrowLeft />
-            Back to project selector
+            Back
           </Link>
         </div>
       </div>
