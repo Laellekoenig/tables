@@ -5,10 +5,22 @@ import {
   type TransformationStatus,
 } from "@/src/db/schemas/transformation-schema"
 
-export const transformStreamEventSchema = z.object({
+const transformPhaseStreamEventSchema = z.object({
+  type: z.literal("phase"),
   transformationId: z.string().min(1),
   phase: z.enum(transformationPhases),
 })
+
+const transformCodeStreamEventSchema = z.object({
+  type: z.literal("code"),
+  transformationId: z.string().min(1),
+  code: z.string(),
+})
+
+export const transformStreamEventSchema = z.discriminatedUnion("type", [
+  transformPhaseStreamEventSchema,
+  transformCodeStreamEventSchema,
+])
 
 export type TransformStreamEvent = z.infer<typeof transformStreamEventSchema>
 

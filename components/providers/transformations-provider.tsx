@@ -25,6 +25,7 @@ export interface ClientTransformation {
   id: string
   optimisticId: string | null
   prompt: string
+  code: string | null
   status: TransformationStatus
   phases: TransformationStatus[]
   state: "streaming" | "complete" | "error"
@@ -154,6 +155,8 @@ function useTransformationsValue(projectId: string): UseTransformationsResult {
     }
 
     markTransformationAsComplete(optimisticId)
+    await queryClient.invalidateQueries({ queryKey })
+
     return ok(undefined)
   }
 
@@ -258,6 +261,7 @@ function mapServerTransformationToClient(
     id: transformation.id,
     optimisticId: null,
     prompt: transformation.prompt,
+    code: transformation.code,
     status: transformation.status,
     phases: getPhasesFromStatus(transformation.status),
     state: getClientTransformationState(transformation.status),
@@ -275,6 +279,7 @@ function createOptimisticCacheTransformation(
     id: optimisticId,
     optimisticId,
     prompt,
+    code: null,
     status: transformationPhases[0],
     phases: [],
     state: "streaming",
@@ -288,6 +293,15 @@ function updateCachedTransformationFromStream(
   optimisticId: string,
   event: TransformStreamEvent,
 ): ClientTransformation[] {
+  if (event.type === "code") {
+    return updateCachedTransformationCode(
+      transformations,
+      optimisticId,
+      event.transformationId,
+      event.code,
+    )
+  }
+
   return transformations.map(transformation => {
     if (
       !doesTransformationMatchEvent(
@@ -313,6 +327,27 @@ function updateCachedTransformationFromStream(
       status: event.phase,
       phases: getPhasesFromStatus(event.phase),
       state: "streaming",
+      code: transformation.code,
+      errorMessage: null,
+    }
+  })
+}
+
+function updateCachedTransformationCode(
+  transformations: ClientTransformation[],
+  optimisticId: string,
+  serverId: string,
+  code: string,
+): ClientTransformation[] {
+  return transformations.map(transformation => {
+    if (!doesTransformationMatchEvent(transformation, optimisticId, serverId)) {
+      return transformation
+    }
+
+    return {
+      ...transformation,
+      id: serverId,
+      code,
       errorMessage: null,
     }
   })

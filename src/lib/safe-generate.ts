@@ -1,7 +1,6 @@
 import { generateText } from "ai"
-import { createOpenRouter } from "@openrouter/ai-sdk-provider"
 import { ResultAsync } from "neverthrow"
-
+import { createOpenRouter } from "@openrouter/ai-sdk-provider"
 import { env } from "@/src/env"
 
 const openrouter = createOpenRouter({
