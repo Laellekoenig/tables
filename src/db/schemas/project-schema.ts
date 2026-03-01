@@ -1,4 +1,6 @@
+import { createSelectSchema } from "drizzle-zod"
 import { pgTable, text, timestamp, index } from "drizzle-orm/pg-core"
+import { z } from "zod"
 import { user } from "./auth-schema"
 
 export const project = pgTable(
@@ -18,3 +20,7 @@ export const project = pgTable(
   },
   table => [index("project_userId_idx").on(table.userId)],
 )
+
+export const projectSelectSchema = createSelectSchema(project)
+
+export type Project = z.infer<typeof projectSelectSchema>

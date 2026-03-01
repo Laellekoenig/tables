@@ -57,6 +57,13 @@
       "when": 1772367039625,
       "tag": "0007_thankful_nightcrawler",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1772369162002,
+      "tag": "0008_lyrical_hulk",
+      "breakpoints": true
     }
   ]
 }
