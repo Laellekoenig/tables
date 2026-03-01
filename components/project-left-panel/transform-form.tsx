@@ -12,7 +12,7 @@ export function TransformForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const formRef = useRef<HTMLFormElement | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
-  const { sendPrompt } = useTransformations()
+  const { sendPrompt, isDeletingTransformations } = useTransformations()
 
   useEffect(() => {
     resizeTextarea(textareaRef.current)
@@ -59,7 +59,7 @@ export function TransformForm() {
           onKeyDown={event => handleTextareaKeyDown(event, formRef.current)}
           rows={1}
           placeholder="Describe the transformation you want to run..."
-          disabled={isSubmitting}
+          disabled={isSubmitting || isDeletingTransformations}
           className="resize-none overflow-hidden border-border/70 bg-background/80"
         />
       </div>
@@ -68,7 +68,7 @@ export function TransformForm() {
         <Button
           type="submit"
           size="icon"
-          disabled={isSubmitting || !text.trim()}
+          disabled={isSubmitting || isDeletingTransformations || !text.trim()}
           className="cursor-pointer"
           aria-label="Submit"
         >

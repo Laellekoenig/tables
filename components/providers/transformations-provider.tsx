@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext } from "react"
+import { createContext, useContext, useState } from "react"
 import { err, ok, type Result } from "neverthrow"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useProject } from "@/src/hooks/use-project"
@@ -19,6 +19,7 @@ import {
   serverGetTransformations,
   type ServerTransformation,
 } from "@/src/server/get-transformations"
+import { serverDeleteProjectTransformations } from "@/src/server/delete-project-transformations"
 
 export interface ClientTransformation {
   id: string
@@ -34,8 +35,10 @@ export interface ClientTransformation {
 interface UseTransformationsResult {
   transformations: ClientTransformation[]
   isLoading: boolean
+  isDeletingTransformations: boolean
   error: string | null
   sendPrompt: (prompt: string) => Promise<Result<void, string>>
+  clearTransformations: () => Promise<Result<void, string>>
   createOptimisticTransformation: (
     prompt: string,
   ) => Promise<ClientTransformation>
@@ -82,6 +85,9 @@ export function useTransformations(): UseTransformationsResult {
 }
 
 function useTransformationsValue(projectId: string): UseTransformationsResult {
+  const [clearError, setClearError] = useState<string | null>(null)
+  const [isDeletingTransformations, setIsDeletingTransformations] =
+    useState(false)
   const queryClient = useQueryClient()
   const queryKey = getTransformationsQueryKey(projectId)
 
@@ -151,6 +157,35 @@ function useTransformationsValue(projectId: string): UseTransformationsResult {
     return ok(undefined)
   }
 
+  async function clearTransformations(): Promise<Result<void, string>> {
+    setClearError(null)
+    setIsDeletingTransformations(true)
+
+    await queryClient.cancelQueries({ queryKey })
+
+    const previousTransformations =
+      queryClient.getQueryData<ClientTransformation[]>(queryKey) ?? []
+
+    queryClient.setQueryData<ClientTransformation[]>(queryKey, [])
+
+    const deleteResult = await serverDeleteProjectTransformations(projectId)
+
+    if (!deleteResult.ok) {
+      queryClient.setQueryData<ClientTransformation[]>(
+        queryKey,
+        previousTransformations,
+      )
+      setClearError(deleteResult.error)
+      setIsDeletingTransformations(false)
+      return err(deleteResult.error)
+    }
+
+    await queryClient.invalidateQueries({ queryKey })
+    setIsDeletingTransformations(false)
+
+    return ok(undefined)
+  }
+
   function updateTransformationFromStream(
     optimisticId: string,
     event: TransformStreamEvent,
@@ -186,8 +221,10 @@ function useTransformationsValue(projectId: string): UseTransformationsResult {
   return {
     transformations: query.data ?? [],
     isLoading: query.isLoading,
-    error: query.error ? query.error.message : null,
+    isDeletingTransformations,
+    error: getTransformationsError(query.error, clearError),
     sendPrompt,
+    clearTransformations,
     createOptimisticTransformation,
     updateTransformationFromStream,
     markTransformationAsFailed,
@@ -197,6 +234,21 @@ function useTransformationsValue(projectId: string): UseTransformationsResult {
 
 function getTransformationsQueryKey(projectId: string): string[] {
   return ["transformations", projectId]
+}
+
+function getTransformationsError(
+  queryError: Error | null,
+  clearError: string | null,
+): string | null {
+  if (clearError) {
+    return clearError
+  }
+
+  if (queryError) {
+    return queryError.message
+  }
+
+  return null
 }
 
 function mapServerTransformationToClient(

@@ -1,11 +1,18 @@
 "use client"
 
-import { CheckCircle2, CircleDashed, Loader2, Sparkles } from "lucide-react"
+import {
+  CheckCircle2,
+  CircleDashed,
+  Loader2,
+  Sparkles,
+  Trash2,
+} from "lucide-react"
 import {
   type ClientTransformation,
   useTransformations,
 } from "@/components/providers/transformations-provider"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
@@ -15,14 +22,26 @@ import {
 } from "@/components/ui/card"
 
 export function TransformationList() {
-  const { transformations, isLoading, error } = useTransformations()
+  const {
+    transformations,
+    isLoading,
+    isDeletingTransformations,
+    error,
+    clearTransformations,
+  } = useTransformations()
   const hasTransformations = transformations.length > 0
 
   return (
     <section className="-mx-6 flex min-h-0 flex-1 flex-col overflow-hidden">
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="sticky top-0 z-10 bg-background/65 px-6 pb-4 pt-4 backdrop-blur-md">
-          <TransformationListHeader count={transformations.length} />
+          <TransformationListHeader
+            count={transformations.length}
+            isDeletingTransformations={isDeletingTransformations}
+            onClearTransformations={() => {
+              void clearTransformations()
+            }}
+          />
         </div>
 
         {error ?
@@ -60,19 +79,44 @@ export function TransformationList() {
   )
 }
 
-function TransformationListHeader({ count }: { count: number }) {
+function TransformationListHeader({
+  count,
+  isDeletingTransformations,
+  onClearTransformations,
+}: {
+  count: number
+  isDeletingTransformations: boolean
+  onClearTransformations: () => void
+}) {
   return (
     <div className="flex items-center justify-between gap-3">
       <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
         Transformations
       </p>
 
-      <Badge
-        variant="outline"
-        className="min-w-8 justify-center border-border/60 bg-background/55 font-mono backdrop-blur-sm"
-      >
-        {count}
-      </Badge>
+      <div className="flex items-center gap-1.5">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          className="cursor-pointer text-muted-foreground hover:text-destructive"
+          aria-label="Delete all transformations"
+          title="Delete all transformations"
+          disabled={count === 0 || isDeletingTransformations}
+          onClick={onClearTransformations}
+        >
+          {isDeletingTransformations ?
+            <Loader2 className="animate-spin" />
+          : <Trash2 />}
+        </Button>
+
+        <Badge
+          variant="outline"
+          className="min-w-8 justify-center border-border/60 bg-background/55 font-mono backdrop-blur-sm"
+        >
+          {count}
+        </Badge>
+      </div>
     </div>
   )
 }
