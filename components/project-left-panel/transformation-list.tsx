@@ -54,7 +54,7 @@ export function TransformationList() {
         : null}
 
         {isLoading && !hasTransformations ?
-          <div className="px-6">
+          <div className="px-6 pb-4">
             <TransformationInfoState
               icon={
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -63,7 +63,7 @@ export function TransformationList() {
             />
           </div>
         : !hasTransformations ?
-          <div className="px-6">
+          <div className="px-6 pb-4">
             <TransformationInfoState
               icon={
                 <div className="rounded-full border border-border/70 bg-background/90 p-2">
@@ -132,7 +132,7 @@ function TransformationInfoState({
   description?: string
 }) {
   return (
-    <div className="mt-4 rounded-2xl border border-dashed border-border/70 bg-muted/20 p-5">
+    <div className="rounded-2xl border border-dashed border-border/70 bg-muted/20 p-5">
       <div className="flex items-center gap-3">
         {icon}
 
