@@ -13,11 +13,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import {
-  type TransformationStatus,
-  transformationPhases,
-} from "@/src/db/schemas/transformation-schema"
-import { getTransformationPhaseIndex } from "@/src/lib/transformation-stream"
 
 export function TransformationList() {
   const { transformations, isLoading, error } = useTransformations()
@@ -134,21 +129,17 @@ function TransformationCard({
 }) {
   return (
     <Card className="border border-border bg-background ring-0 shadow-none">
-      <CardHeader className="border-b border-border/60">
+      <CardHeader>
         <TransformationCardHeader transformation={transformation} />
       </CardHeader>
 
-      <CardContent className="space-y-4">
-        <TransformationProgress transformation={transformation} />
-
-        <TransformationPhaseList transformation={transformation} />
-
-        {transformation.errorMessage ?
+      {transformation.errorMessage ?
+        <CardContent className="space-y-4">
           <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
             {transformation.errorMessage}
           </div>
-        : null}
-      </CardContent>
+        </CardContent>
+      : null}
     </Card>
   )
 }
@@ -192,130 +183,6 @@ function TransformationCardHeader({
   )
 }
 
-function TransformationProgress({
-  transformation,
-}: {
-  transformation: ClientTransformation
-}) {
-  const progress = getTransformationProgress(transformation)
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>Progress</span>
-
-        <span>{progress}%</span>
-      </div>
-
-      <div className="h-2 overflow-hidden rounded-full bg-muted">
-        <div
-          className="h-full rounded-full bg-primary transition-all duration-500"
-          style={{
-            width: `${progress}%`,
-          }}
-        />
-      </div>
-    </div>
-  )
-}
-
-function TransformationPhaseList({
-  transformation,
-}: {
-  transformation: ClientTransformation
-}) {
-  return (
-    <div className="grid gap-2">
-      {transformationPhases.map(phase => {
-        return (
-          <TransformationPhaseRow
-            key={phase}
-            phase={phase}
-            transformation={transformation}
-          />
-        )
-      })}
-    </div>
-  )
-}
-
-function TransformationPhaseRow({
-  phase,
-  transformation,
-}: {
-  phase: TransformationStatus
-  transformation: ClientTransformation
-}) {
-  const phaseState = getPhaseState(
-    phase,
-    transformation.phases,
-    transformation.state === "streaming",
-  )
-
-  return (
-    <div className="flex items-center justify-between rounded-xl border border-border/60 bg-background/80 px-3 py-2">
-      <div className="flex items-center gap-3">
-        {renderPhaseIcon(phaseState)}
-
-        <span className="text-sm font-medium capitalize text-foreground">
-          {phase}
-        </span>
-      </div>
-
-      <Badge
-        variant={phaseState === "complete" ? "default" : "outline"}
-        className="capitalize"
-      >
-        {phaseState}
-      </Badge>
-    </div>
-  )
-}
-
-function getPhaseState(
-  phase: TransformationStatus,
-  receivedPhases: TransformationStatus[],
-  isStreaming: boolean,
-): "complete" | "active" | "pending" {
-  const highestPhase = receivedPhases[receivedPhases.length - 1]
-
-  if (!highestPhase) {
-    return "pending"
-  }
-
-  const phaseIndex = getTransformationPhaseIndex(phase)
-  const highestPhaseIndex = getTransformationPhaseIndex(highestPhase)
-
-  if (phaseIndex < highestPhaseIndex) {
-    return "complete"
-  }
-
-  if (phaseIndex === highestPhaseIndex) {
-    if (
-      !isStreaming
-      && highestPhase === transformationPhases[transformationPhases.length - 1]
-    ) {
-      return "complete"
-    }
-
-    return "active"
-  }
-
-  return "pending"
-}
-
-function renderPhaseIcon(state: "complete" | "active" | "pending") {
-  if (state === "complete") {
-    return <CheckCircle2 className="h-4 w-4 text-primary" />
-  }
-
-  if (state === "active") {
-    return <Loader2 className="h-4 w-4 animate-spin text-primary" />
-  }
-
-  return <div className="h-4 w-4 rounded-full border border-border/80" />
-}
-
 function renderTransformationStatusIcon(
   transformationItem: ClientTransformation,
 ) {
@@ -354,18 +221,6 @@ function getTransformationStateLabel(
   return transformationItem.status
 }
 
-function getTransformationProgress(
-  transformationItem: ClientTransformation,
-): number {
-  if (transformationItem.phases.length === 0) {
-    return 0
-  }
-
-  return Math.round(
-    (transformationItem.phases.length / transformationPhases.length) * 100,
-  )
-}
-
 function getTransformationLabel(
   transformationItem: ClientTransformation,
 ): string {
@@ -379,6 +234,7 @@ function getTransformationLabel(
 function formatTransformationTimestamp(createdAt: number): string {
   return new Intl.DateTimeFormat(undefined, {
     hour: "2-digit",
+    hour12: false,
     minute: "2-digit",
   }).format(createdAt)
 }
