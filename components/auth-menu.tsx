@@ -13,7 +13,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu"
-import { cn } from "@/lib/utils"
+import { cn } from "@/src/lib/utils"
 
 export default function AuthMenu() {
   const { data: session } = authClient.useSession()
