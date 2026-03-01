@@ -2,15 +2,17 @@
 
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
+import { TransformationsProvider } from "@/components/providers/transformations-provider"
 import { buttonVariants } from "@/components/ui/button"
 import { TransformForm } from "@/components/project-left-panel/transform-form"
+import { TransformationList } from "@/components/project-left-panel/transformation-list"
 import { useProject } from "@/src/hooks/use-project"
 
 export function ProjectLeftPanel() {
   const { project } = useProject()
 
   return (
-    <div className="flex h-full flex-col bg-gradient-to-b from-background via-background to-muted/20">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-gradient-to-b from-background via-background to-muted/20">
       <div className="w-full border-b border-border/70 p-6">
         <div className="flex flex-col">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
@@ -36,8 +38,12 @@ export function ProjectLeftPanel() {
         </div>
       </div>
 
-      <div className="flex-1 px-6 pb-6">
-        <TransformForm />
+      <div className="min-h-0 flex flex-1 flex-col px-6 pb-6">
+        <TransformationsProvider>
+          <TransformForm />
+
+          <TransformationList />
+        </TransformationsProvider>
       </div>
     </div>
   )

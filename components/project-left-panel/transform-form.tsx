@@ -3,15 +3,16 @@
 import { useEffect, useRef, useState } from "react"
 import { ArrowUp, Loader2 } from "lucide-react"
 import { toast } from "sonner"
+import { useTransformations } from "@/components/providers/transformations-provider"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { safeFetch } from "@/src/lib/safe-fetch"
 
 export function TransformForm() {
   const [text, setText] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const formRef = useRef<HTMLFormElement | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+  const { sendPrompt } = useTransformations()
 
   useEffect(() => {
     resizeTextarea(textareaRef.current)
@@ -26,17 +27,10 @@ export function TransformForm() {
     }
 
     setIsSubmitting(true)
+    const sendPromptResult = await sendPrompt(trimmedText)
 
-    const responseResult = await safeFetch("/api/transform", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ text: trimmedText }),
-    })
-
-    if (responseResult.isErr()) {
-      toast.error(responseResult.error)
+    if (sendPromptResult.isErr()) {
+      toast.error(sendPromptResult.error)
       setIsSubmitting(false)
       return
     }
@@ -49,7 +43,7 @@ export function TransformForm() {
     <form
       ref={formRef}
       onSubmit={handleSubmit}
-      className="-mx-6 w-[calc(100%+3rem)] border-b border-border/70 p-6"
+      className="-mx-6 border-b border-border/70 p-6"
     >
       <div className="space-y-2">
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">

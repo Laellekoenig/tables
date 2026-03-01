@@ -5,64 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1771945841052,
-      "tag": "0000_late_lily_hollister",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1771946554169,
-      "tag": "0001_wandering_miss_america",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1771953282913,
-      "tag": "0002_optimal_doorman",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1772015127996,
-      "tag": "0003_ambiguous_lord_tyger",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1772143499702,
-      "tag": "0004_third_talon",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1772197684805,
-      "tag": "0005_nosy_greymalkin",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1772201646838,
-      "tag": "0006_massive_johnny_storm",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1772367039625,
-      "tag": "0007_thankful_nightcrawler",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "7",
-      "when": 1772369162002,
-      "tag": "0008_lyrical_hulk",
+      "when": 1772375693928,
+      "tag": "0000_worried_mandroid",
       "breakpoints": true
     }
   ]

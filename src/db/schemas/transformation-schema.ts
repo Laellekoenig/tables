@@ -12,12 +12,17 @@ import {
 import { z } from "zod"
 import { project } from "./project-schema"
 
-export const transformationStatus = pgEnum("transformation_status", [
+export const transformationPhases = [
   "init",
   "generating",
   "running",
   "done",
-])
+] as const
+
+export const transformationStatus = pgEnum(
+  "transformation_status",
+  transformationPhases,
+)
 
 export const transformationStatusSchema =
   createSelectSchema(transformationStatus)
@@ -38,8 +43,8 @@ export const transformation = pgTable(
       },
     ),
     prompt: text("prompt").notNull(),
-    csvContent: text("csv_content").notNull(),
-    code: text("code").notNull(),
+    csvResult: text("csv_result"),
+    code: text("code"),
     status: transformationStatus("status").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
