@@ -21,35 +21,46 @@ import { getTransformationPhaseIndex } from "@/src/lib/transformation-stream"
 
 export function TransformationList() {
   const { transformations, isLoading, error } = useTransformations()
+  const hasTransformations = transformations.length > 0
 
   return (
-    <section className="-mx-6 flex min-h-0 flex-1 flex-col overflow-hidden px-6 pb-6 pt-4">
-      <TransformationListHeader count={transformations.length} />
-
-      {error ?
-        <div className="mt-4 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-          {error}
+    <section className="-mx-6 flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="sticky top-0 z-10 bg-background/65 px-6 pb-4 pt-4 backdrop-blur-md">
+          <TransformationListHeader count={transformations.length} />
         </div>
-      : null}
 
-      {isLoading && transformations.length === 0 ?
-        <TransformationInfoState
-          icon={
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-          }
-          title="Loading transformations..."
-        />
-      : transformations.length === 0 ?
-        <TransformationInfoState
-          icon={
-            <div className="rounded-full border border-border/70 bg-background/90 p-2">
-              <Sparkles className="h-4 w-4 text-muted-foreground" />
+        {error ?
+          <div className="px-6">
+            <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+              {error}
             </div>
-          }
-          title="No transformations yet"
-          description="Submit a prompt to create the first transformation card."
-        />
-      : <TransformationCards transformations={transformations} />}
+          </div>
+        : null}
+
+        {isLoading && !hasTransformations ?
+          <div className="px-6">
+            <TransformationInfoState
+              icon={
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              }
+              title="Loading transformations..."
+            />
+          </div>
+        : !hasTransformations ?
+          <div className="px-6">
+            <TransformationInfoState
+              icon={
+                <div className="rounded-full border border-border/70 bg-background/90 p-2">
+                  <Sparkles className="h-4 w-4 text-muted-foreground" />
+                </div>
+              }
+              title="No transformations yet"
+              description="Submit a prompt to create the first transformation card."
+            />
+          </div>
+        : <TransformationCards transformations={transformations} />}
+      </div>
     </section>
   )
 }
@@ -57,20 +68,13 @@ export function TransformationList() {
 function TransformationListHeader({ count }: { count: number }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-          Transformations
-        </p>
-
-        <p className="mt-2 text-sm text-muted-foreground">
-          Each submission appears here immediately and keeps streaming phase
-          progress until completion.
-        </p>
-      </div>
+      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+        Transformations
+      </p>
 
       <Badge
         variant="outline"
-        className="min-w-8 justify-center font-mono"
+        className="min-w-8 justify-center border-border/60 bg-background/55 font-mono backdrop-blur-sm"
       >
         {count}
       </Badge>
@@ -110,17 +114,15 @@ function TransformationCards({
   transformations: ClientTransformation[]
 }) {
   return (
-    <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
-      <div className="space-y-4">
-        {transformations.map(transformationItem => {
-          return (
-            <TransformationCard
-              key={transformationItem.id}
-              transformation={transformationItem}
-            />
-          )
-        })}
-      </div>
+    <div className="space-y-4 px-6 pb-4">
+      {transformations.map(transformationItem => {
+        return (
+          <TransformationCard
+            key={transformationItem.id}
+            transformation={transformationItem}
+          />
+        )
+      })}
     </div>
   )
 }
@@ -131,7 +133,7 @@ function TransformationCard({
   transformation: ClientTransformation
 }) {
   return (
-    <Card className="border border-border/70 bg-gradient-to-br from-background via-background to-muted/30 shadow-sm">
+    <Card className="border border-border bg-background ring-0 shadow-none">
       <CardHeader className="border-b border-border/60">
         <TransformationCardHeader transformation={transformation} />
       </CardHeader>

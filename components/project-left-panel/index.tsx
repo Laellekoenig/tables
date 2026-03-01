@@ -40,7 +40,7 @@ export function ProjectLeftPanel() {
         </div>
       </div>
 
-      <div className="min-h-0 flex flex-1 flex-col px-6 pb-6">
+      <div className="min-h-0 flex flex-1 flex-col px-6">
         <TransformationsProvider>
           <TransformForm />
 
