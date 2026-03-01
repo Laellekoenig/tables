@@ -64,8 +64,11 @@ function getTransformationSystemPrompt(): string {
   return [
     "You generate Python transformation scripts using pandas.",
     "Return only executable Python code with no markdown fences or explanation.",
-    'The script must read input data from "data.csv".',
-    'The script must write the transformed result to "transformed.csv".',
+    "Return a single function that takes a pandas DataFrame and returns the transformed pandas DataFrame.",
+    "Give the function a suitable descriptive name.",
+    "Use Python type annotations for the function signature.",
+    "Assume pandas and numpy are already imported and available.",
+    "Do not read from files or write to files.",
     "Use pandas for the transformation logic.",
     "Preserve existing columns unless the user explicitly asks to remove or replace them.",
   ].join("\n")
@@ -73,7 +76,7 @@ function getTransformationSystemPrompt(): string {
 
 function getTransformationUserPrompt(prompt: string): string {
   return [
-    "Create a complete Python script that satisfies this transformation request:",
+    "Create a Python function that satisfies this transformation request:",
     prompt,
   ].join("\n\n")
 }
