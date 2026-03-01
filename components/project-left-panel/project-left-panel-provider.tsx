@@ -58,6 +58,7 @@ interface RenderedTransformation {
 
 interface ProjectLeftPanelContextValue {
   isSubmitting: boolean
+  isSubmitDisabled: boolean
   renderedTransformations: RenderedTransformation[]
   approvalLoadingById: Record<string, boolean>
   submitPrompt: (prompt: string) => Promise<boolean>
@@ -86,6 +87,12 @@ export function ProjectLeftPanelProvider({
   const persistedTransformations = useMemo(() => {
     return flattenTree(transformationTree)
   }, [transformationTree])
+  const hasInFlight = useMemo(() => {
+    return hasInFlightTransformations(
+      persistedTransformations,
+      liveTransformations,
+    )
+  }, [persistedTransformations, liveTransformations])
 
   useEffect(() => {
     return () => {
@@ -100,6 +107,13 @@ export function ProjectLeftPanelProvider({
   async function submitPrompt(rawPrompt: string): Promise<boolean> {
     const prompt = rawPrompt.trim()
     if (!prompt) {
+      return false
+    }
+
+    if (hasInFlight) {
+      toast.error(
+        "Finish the current transformation before submitting another.",
+      )
       return false
     }
 
@@ -227,6 +241,8 @@ export function ProjectLeftPanelProvider({
       transformation.createdAt.getTime(),
       setLiveTransformations,
     )
+
+    router.refresh()
   }
 
   async function declineExecution(transformation: Transformation) {
@@ -381,6 +397,7 @@ export function ProjectLeftPanelProvider({
 
   const value: ProjectLeftPanelContextValue = {
     isSubmitting,
+    isSubmitDisabled: isSubmitting || hasInFlight,
     renderedTransformations,
     approvalLoadingById,
     submitPrompt,
@@ -689,6 +706,33 @@ function isTerminalStatus(status: Transformation["status"]): boolean {
 
   if (status === "stale") {
     return true
+  }
+
+  return false
+}
+
+function hasInFlightTransformations(
+  persisted: Transformation[],
+  live: LiveTransformation[],
+): boolean {
+  const transformationById = new Map<string, Transformation>()
+
+  for (const item of persisted) {
+    transformationById.set(item.id, item)
+  }
+
+  for (const item of live) {
+    transformationById.set(item.transformation.id, item.transformation)
+  }
+
+  for (const item of transformationById.values()) {
+    if (item.status === "pending") {
+      return true
+    }
+
+    if (item.status === "running") {
+      return true
+    }
   }
 
   return false

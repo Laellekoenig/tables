@@ -35,6 +35,11 @@ export async function serverCreateTransformation(input: {
     return ownershipResult
   }
 
+  const parentResult = await getParentIdForNextTransformation(input.projectId)
+  if (!parentResult.ok) {
+    return parentResult
+  }
+
   const id = crypto.randomUUID()
 
   const insertResult = await ResultAsync.fromPromise(
@@ -43,7 +48,7 @@ export async function serverCreateTransformation(input: {
       .values({
         id,
         projectId: input.projectId,
-        parentId: input.parentId,
+        parentId: parentResult.value,
         prompt: input.prompt,
         status: "pending",
       })
@@ -236,6 +241,84 @@ export async function serverCreateAndExecuteTransformation(input: {
   }
 
   return executeResult
+}
+
+async function getParentIdForNextTransformation(
+  projectId: string,
+): Promise<ActionResult<string | null>> {
+  const rowsResult = await ResultAsync.fromPromise(
+    db
+      .select({
+        id: transformation.id,
+        status: transformation.status,
+        outputCsv: transformation.outputCsv,
+        lastExecutedAt: transformation.lastExecutedAt,
+        updatedAt: transformation.updatedAt,
+      })
+      .from(transformation)
+      .where(eq(transformation.projectId, projectId)),
+    () => "Failed to determine transformation parent.",
+  )
+
+  if (rowsResult.isErr()) {
+    return { ok: false, error: rowsResult.error }
+  }
+
+  if (rowsResult.value.some(item => isInFlightStatus(item.status))) {
+    return {
+      ok: false,
+      error: "Finish the current transformation before creating a new one.",
+    }
+  }
+
+  const latestCompleted = rowsResult.value
+    .filter(item => item.status === "completed" && Boolean(item.outputCsv))
+    .reduce<{
+      id: string
+      lastExecutedAt: Date | null
+      updatedAt: Date
+    } | null>((latest, item) => {
+      if (!latest) {
+        return item
+      }
+
+      if (
+        getTransformationTimestamp(item) >= getTransformationTimestamp(latest)
+      ) {
+        return item
+      }
+
+      return latest
+    }, null)
+
+  if (!latestCompleted) {
+    return { ok: true, value: null }
+  }
+
+  return { ok: true, value: latestCompleted.id }
+}
+
+function getTransformationTimestamp(row: {
+  lastExecutedAt: Date | null
+  updatedAt: Date
+}): number {
+  if (row.lastExecutedAt) {
+    return row.lastExecutedAt.getTime()
+  }
+
+  return row.updatedAt.getTime()
+}
+
+function isInFlightStatus(status: Transformation["status"]): boolean {
+  if (status === "pending") {
+    return true
+  }
+
+  if (status === "running") {
+    return true
+  }
+
+  return false
 }
 
 async function getInputCsvForNewTransformation(

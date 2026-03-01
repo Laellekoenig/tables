@@ -11,7 +11,7 @@ type FormSubmitEvent = Parameters<
 >[0]
 
 export function ProjectLeftPanelForm() {
-  const { isSubmitting, submitPrompt } = useProjectLeftPanel()
+  const { isSubmitting, isSubmitDisabled, submitPrompt } = useProjectLeftPanel()
   const editorRef = useRef<PromptEditorHandle>(null)
   const formRef = useRef<HTMLFormElement>(null)
 
@@ -43,7 +43,7 @@ export function ProjectLeftPanelForm() {
     >
       <PromptEditor
         ref={editorRef}
-        disabled={isSubmitting}
+        disabled={isSubmitDisabled}
         onRequestSubmit={() => {
           formRef.current?.requestSubmit()
         }}
@@ -51,7 +51,7 @@ export function ProjectLeftPanelForm() {
 
       <Button
         type="submit"
-        disabled={isSubmitting}
+        disabled={isSubmitDisabled}
         className="cursor-pointer self-end"
       >
         {isSubmitting ?
