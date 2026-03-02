@@ -10,20 +10,23 @@ const openrouter = createOpenRouter({
 export function safeStreamGenerateText(
   systemPrompt: string,
   userPrompt: string,
+  model = "openai/gpt-5.2-codex",
 ): Result<ReturnType<typeof streamText>, string> {
-  return createTextStream({ systemPrompt, userPrompt })
+  return createTextStream({ model, systemPrompt, userPrompt })
 }
 
 const createTextStream = Result.fromThrowable(
   ({
+    model,
     systemPrompt,
     userPrompt,
   }: {
+    model: string
     systemPrompt: string
     userPrompt: string
   }) =>
     streamText({
-      model: openrouter("openai/gpt-5.2-codex"),
+      model: openrouter(model),
       system: systemPrompt,
       prompt: userPrompt,
     }),

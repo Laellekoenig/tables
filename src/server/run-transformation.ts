@@ -1,10 +1,8 @@
 import "server-only"
 
-import { eq } from "drizzle-orm"
-import { err, ok, ResultAsync, type Result } from "neverthrow"
-import { db } from "@/src/db"
-import { transformation } from "@/src/db/schemas"
+import { err, ok, type Result } from "neverthrow"
 import { safeExecPython } from "@/src/lib/safe-exec-python"
+import { getRunTransformationRecord } from "@/src/server/get-run-transformation-record"
 import { getTransformationInputCsv } from "@/src/server/get-transformation-input-csv"
 
 export async function runTransformation(
@@ -30,19 +28,11 @@ export async function runTransformation(
   return ok(executionResult.value.outputCsv)
 }
 
-interface RunTransformationInput {
-  code: string
-  csv: string
-}
-
-interface TransformationRecord {
-  code: string | null
-}
-
-async function getRunTransformationInput(
+export async function getStoredTransformationCode(
   transformationId: string,
-): Promise<Result<RunTransformationInput, string>> {
-  const transformationResult = await getTransformationRecord(transformationId)
+): Promise<Result<string, string>> {
+  const transformationResult =
+    await getRunTransformationRecord(transformationId)
 
   if (transformationResult.isErr()) {
     return err(transformationResult.error)
@@ -54,6 +44,23 @@ async function getRunTransformationInput(
     return err("Generated code is missing.")
   }
 
+  return ok(code)
+}
+
+interface RunTransformationInput {
+  code: string
+  csv: string
+}
+
+async function getRunTransformationInput(
+  transformationId: string,
+): Promise<Result<RunTransformationInput, string>> {
+  const codeResult = await getStoredTransformationCode(transformationId)
+
+  if (codeResult.isErr()) {
+    return err(codeResult.error)
+  }
+
   const csvResult = await getTransformationInputCsv(transformationId)
 
   if (csvResult.isErr()) {
@@ -61,32 +68,7 @@ async function getRunTransformationInput(
   }
 
   return ok({
-    code,
+    code: codeResult.value,
     csv: csvResult.value,
   })
-}
-
-async function getTransformationRecord(
-  transformationId: string,
-): Promise<Result<TransformationRecord, string>> {
-  const recordResult = await ResultAsync.fromPromise(
-    db
-      .select({
-        code: transformation.code,
-      })
-      .from(transformation)
-      .where(eq(transformation.id, transformationId))
-      .limit(1),
-    () => "Failed to fetch transformation.",
-  ).map(rows => rows[0])
-
-  if (recordResult.isErr()) {
-    return err(recordResult.error)
-  }
-
-  if (!recordResult.value) {
-    return err("Transformation not found.")
-  }
-
-  return ok(recordResult.value)
 }

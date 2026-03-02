@@ -4,12 +4,17 @@ import { safeRequestJson } from "@/src/lib/safe-request-json"
 import { type TransformStreamEvent } from "@/src/lib/transformation-stream"
 import { createTransformation } from "@/src/server/create-transformation"
 import { streamTransformationCode } from "@/src/server/generate-transformation-code"
+import { streamTransformationExplanation } from "@/src/server/generate-transformation-explanation"
 import { getAuthedSession } from "@/src/server/auth-helper"
 import { getProjectSnapshot } from "@/src/server/get-project-snapshot"
 import { getTransformationInputCsv } from "@/src/server/get-transformation-input-csv"
-import { runTransformation } from "@/src/server/run-transformation"
+import {
+  getStoredTransformationCode,
+  runTransformation,
+} from "@/src/server/run-transformation"
 import { updateTransformationCode } from "@/src/server/update-transformation-code"
 import { updateTransformationCsvResult } from "@/src/server/update-transformation-csv-result"
+import { updateTransformationExplanation } from "@/src/server/update-transformation-explanation"
 import { updateTransformationStatus } from "@/src/server/update-transformation-status"
 
 interface TransformRequestBody {
@@ -263,6 +268,41 @@ async function executeTransformationStage({
       transformationId,
       csv: runResult.value,
     })
+  }
+
+  if (phase === "explanation") {
+    const codeResult = await getStoredTransformationCode(transformationId)
+
+    if (codeResult.isErr()) {
+      return err(codeResult.error)
+    }
+
+    const explanationResult = await streamTransformationExplanation(
+      codeResult.value,
+      inputCsv,
+      explanation => {
+        return enqueueTransformStreamEvent(controller, encoder, {
+          type: "explanation",
+          transformationId,
+          explanation,
+        })
+      },
+    )
+
+    if (explanationResult.isErr()) {
+      return err(explanationResult.error)
+    }
+
+    const updateExplanationResult = await updateTransformationExplanation(
+      transformationId,
+      explanationResult.value,
+    )
+
+    if (updateExplanationResult.isErr()) {
+      return err(updateExplanationResult.error)
+    }
+
+    return ok(undefined)
   }
 
   return ok(undefined)

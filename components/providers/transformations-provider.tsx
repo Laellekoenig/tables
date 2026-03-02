@@ -27,6 +27,7 @@ export interface ClientTransformation {
   prompt: string
   code: string | null
   csvResult: string | null
+  explanation: string | null
   status: TransformationStatus
   phases: TransformationStatus[]
   state: "streaming" | "complete" | "error"
@@ -296,6 +297,7 @@ function mapServerTransformationToClient(
     prompt: transformation.prompt,
     code: transformation.code,
     csvResult: transformation.csvResult,
+    explanation: transformation.explanation,
     status: transformation.status,
     phases: getPhasesFromStatus(transformation.status),
     state: getClientTransformationState(transformation.status),
@@ -315,6 +317,7 @@ function createOptimisticCacheTransformation(
     prompt,
     code: null,
     csvResult: null,
+    explanation: null,
     status: transformationPhases[0],
     phases: [],
     state: "streaming",
@@ -346,6 +349,15 @@ function updateCachedTransformationFromStream(
     )
   }
 
+  if (event.type === "explanation") {
+    return updateCachedTransformationExplanation(
+      transformations,
+      optimisticId,
+      event.transformationId,
+      event.explanation,
+    )
+  }
+
   return transformations.map(transformation => {
     if (
       !doesTransformationMatchEvent(
@@ -373,6 +385,7 @@ function updateCachedTransformationFromStream(
       state: "streaming",
       code: transformation.code,
       csvResult: transformation.csvResult,
+      explanation: transformation.explanation,
       errorMessage: null,
     }
   })
@@ -413,6 +426,26 @@ function updateCachedTransformationCsvResult(
       ...transformation,
       id: serverId,
       csvResult,
+      errorMessage: null,
+    }
+  })
+}
+
+function updateCachedTransformationExplanation(
+  transformations: ClientTransformation[],
+  optimisticId: string,
+  serverId: string,
+  explanation: string,
+): ClientTransformation[] {
+  return transformations.map(transformation => {
+    if (!doesTransformationMatchEvent(transformation, optimisticId, serverId)) {
+      return transformation
+    }
+
+    return {
+      ...transformation,
+      id: serverId,
+      explanation,
       errorMessage: null,
     }
   })
@@ -476,6 +509,10 @@ function doesTransformationMatchOptimisticId(
 function getPhasesFromStatus(
   status: TransformationStatus,
 ): TransformationStatus[] {
+  if (status === "done") {
+    return [...transformationPhases]
+  }
+
   const phaseIndex = transformationPhases.indexOf(status)
 
   if (phaseIndex === -1) {
@@ -488,7 +525,7 @@ function getPhasesFromStatus(
 function getClientTransformationState(
   status: TransformationStatus,
 ): ClientTransformation["state"] {
-  if (status === "done") {
+  if (status === "done" || status === "explanation") {
     return "complete"
   }
 

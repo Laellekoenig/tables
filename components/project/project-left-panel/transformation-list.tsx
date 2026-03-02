@@ -173,6 +173,7 @@ function TransformationCard({
   transformation: ClientTransformation
 }) {
   const hasCode = Boolean(transformation.code?.trim())
+  const hasExplanation = Boolean(transformation.explanation?.trim())
 
   return (
     <Card className="border border-border bg-background ring-0 shadow-none">
@@ -180,10 +181,16 @@ function TransformationCard({
         <TransformationCardHeader transformation={transformation} />
       </CardHeader>
 
-      {transformation.errorMessage || hasCode ?
+      {transformation.errorMessage || hasCode || hasExplanation ?
         <CardContent className="space-y-4">
           {hasCode ?
             <PythonCodeBlock code={transformation.code ?? ""} />
+          : null}
+
+          {hasExplanation ?
+            <TransformationExplanationBlock
+              explanation={transformation.explanation ?? ""}
+            />
           : null}
 
           {transformation.errorMessage ?
@@ -194,6 +201,26 @@ function TransformationCard({
         </CardContent>
       : null}
     </Card>
+  )
+}
+
+function TransformationExplanationBlock({
+  explanation,
+}: {
+  explanation: string
+}) {
+  return (
+    <div className="space-y-2">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+        Explanation
+      </p>
+
+      <div className="rounded-xl border border-border/70 bg-muted/20 px-4 py-3">
+        <p className="whitespace-pre-wrap text-sm leading-6 text-foreground">
+          {explanation}
+        </p>
+      </div>
+    </div>
   )
 }
 
@@ -269,6 +296,10 @@ function getTransformationStateLabel(
 ): string {
   if (transformationItem.state === "error") {
     return "failed"
+  }
+
+  if (transformationItem.state === "complete") {
+    return "complete"
   }
 
   return transformationItem.status

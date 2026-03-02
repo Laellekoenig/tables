@@ -12,22 +12,31 @@ import {
 import { z } from "zod"
 import { project } from "./project-schema"
 
+export const transformationStatuses = [
+  "init",
+  "generating",
+  "running",
+  "explanation",
+  "done",
+] as const
+
 export const transformationPhases = [
   "init",
   "generating",
   "running",
-  "done",
-] as const
+  "explanation",
+] as const satisfies readonly (typeof transformationStatuses)[number][]
 
 export const transformationStatus = pgEnum(
   "transformation_status",
-  transformationPhases,
+  transformationStatuses,
 )
 
 export const transformationStatusSchema =
   createSelectSchema(transformationStatus)
 
 export type TransformationStatus = z.infer<typeof transformationStatusSchema>
+export type TransformationPhase = (typeof transformationPhases)[number]
 
 export const transformation = pgTable(
   "transformation",
@@ -45,6 +54,7 @@ export const transformation = pgTable(
     prompt: text("prompt").notNull(),
     csvResult: text("csv_result"),
     code: text("code"),
+    explanation: text("explanation"),
     status: transformationStatus("status").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")

@@ -23,10 +23,17 @@ const transformCsvStreamEventSchema = z.object({
   csv: z.string(),
 })
 
+const transformExplanationStreamEventSchema = z.object({
+  type: z.literal("explanation"),
+  transformationId: z.string().min(1),
+  explanation: z.string(),
+})
+
 export const transformStreamEventSchema = z.discriminatedUnion("type", [
   transformPhaseStreamEventSchema,
   transformCodeStreamEventSchema,
   transformCsvStreamEventSchema,
+  transformExplanationStreamEventSchema,
 ])
 
 export type TransformStreamEvent = z.infer<typeof transformStreamEventSchema>
@@ -46,5 +53,9 @@ export function safeParseTransformStreamEvent(
 export function getTransformationPhaseIndex(
   phase: TransformationStatus,
 ): number {
+  if (phase === "done") {
+    return transformationPhases.length - 1
+  }
+
   return transformationPhases.indexOf(phase)
 }
