@@ -1,13 +1,16 @@
 "use client"
 
-import { createContext, useContext } from "react"
+import { createContext, useContext, useState } from "react"
+import { err, ok, type Result } from "neverthrow"
+import { parseCsv, type ParsedCsv } from "@/src/lib/csv-parsing"
 import { type Project } from "@/src/server/get-project"
-import { type ParsedCsv } from "@/src/lib/csv-parsing"
 
 export interface ProjectContextValue {
   project: Project
   csv: ParsedCsv
   displayedCsv: ParsedCsv
+  setDisplayedCsvFromText: (csvText: string) => Result<void, string>
+  resetDisplayedCsv: () => void
 }
 
 const ProjectContext = createContext<ProjectContextValue | null>(null)
@@ -15,18 +18,46 @@ const ProjectContext = createContext<ProjectContextValue | null>(null)
 export function ProjectProvider({
   project,
   csv,
+  csvText,
   children,
 }: {
   project: Project
   csv: ParsedCsv
+  csvText: string
   children: React.ReactNode
 }) {
+  const [displayedCsv, setDisplayedCsv] = useState<ParsedCsv>(csv)
+  const [displayedCsvText, setDisplayedCsvText] = useState(csvText)
+
   return (
     <ProjectContext.Provider
       value={{
         project,
         csv,
-        displayedCsv: csv,
+        displayedCsv,
+        setDisplayedCsvFromText: csvText => {
+          if (csvText === displayedCsvText) {
+            return ok(undefined)
+          }
+
+          const parsedCsvResult = parseCsv(csvText)
+
+          if (parsedCsvResult.isErr()) {
+            return err(parsedCsvResult.error)
+          }
+
+          setDisplayedCsv(parsedCsvResult.value)
+          setDisplayedCsvText(csvText)
+          return ok(undefined)
+        },
+        resetDisplayedCsv: () => {
+          if (displayedCsvText === csvText) {
+            return
+          }
+
+          setDisplayedCsv(csv)
+          setDisplayedCsvText(csvText)
+        },
       }}
     >
       {children}

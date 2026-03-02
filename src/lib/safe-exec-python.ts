@@ -5,9 +5,9 @@ import { err, ok, Result, ResultAsync } from "neverthrow"
 import { env } from "@/src/env"
 
 const SANDBOX_TIMEOUT_S = 30
-const INPUT_CSV_PATH = "data.csv"
+const INPUT_CSV_PATH = "input.csv"
 const SCRIPT_PATH = "script.py"
-const OUTPUT_CSV_PATH = "transformed.csv"
+const OUTPUT_CSV_PATH = "output.csv"
 
 export interface PythonExecResult {
   outputCsv: string
@@ -15,17 +15,32 @@ export interface PythonExecResult {
 
 export function safeExecPython(
   inputCsv: string,
-  script: string,
+  generatedCode: string,
 ): ResultAsync<PythonExecResult, string> {
+  const program = createPythonProgram(generatedCode)
+
   return ResultAsync.fromPromise(
-    executePythonInSandbox(inputCsv, script),
+    executePythonInSandbox(inputCsv, program),
     () => "Unexpected error during Python execution.",
   ).andThen(r => r)
 }
 
+export function createPythonProgram(generatedCode: string): string {
+  return [
+    "import numpy as np",
+    "import pandas as pd",
+    "",
+    generatedCode.trim(),
+    "",
+    `df = pd.read_csv("${INPUT_CSV_PATH}")`,
+    "result_df = transform(df)",
+    `result_df.to_csv("${OUTPUT_CSV_PATH}", index=False)`,
+  ].join("\n")
+}
+
 async function executePythonInSandbox(
   inputCsv: string,
-  script: string,
+  program: string,
 ): Promise<Result<PythonExecResult, string>> {
   const sandboxResult = await createSandbox()
   if (sandboxResult.isErr()) {
@@ -36,7 +51,7 @@ async function executePythonInSandbox(
   const uploadResult = await ResultAsync.fromPromise(
     sandbox.fs
       .uploadFile(Buffer.from(inputCsv), INPUT_CSV_PATH)
-      .then(() => sandbox.fs.uploadFile(Buffer.from(script), SCRIPT_PATH)),
+      .then(() => sandbox.fs.uploadFile(Buffer.from(program), SCRIPT_PATH)),
     () => "Failed to upload files to sandbox.",
   )
   if (uploadResult.isErr()) {

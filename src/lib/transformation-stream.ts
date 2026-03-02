@@ -17,9 +17,16 @@ const transformCodeStreamEventSchema = z.object({
   code: z.string(),
 })
 
+const transformCsvStreamEventSchema = z.object({
+  type: z.literal("csv"),
+  transformationId: z.string().min(1),
+  csv: z.string(),
+})
+
 export const transformStreamEventSchema = z.discriminatedUnion("type", [
   transformPhaseStreamEventSchema,
   transformCodeStreamEventSchema,
+  transformCsvStreamEventSchema,
 ])
 
 export type TransformStreamEvent = z.infer<typeof transformStreamEventSchema>

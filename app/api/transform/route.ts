@@ -6,7 +6,10 @@ import { createTransformation } from "@/src/server/create-transformation"
 import { streamTransformationCode } from "@/src/server/generate-transformation-code"
 import { getAuthedSession } from "@/src/server/auth-helper"
 import { getProjectSnapshot } from "@/src/server/get-project-snapshot"
+import { getTransformationInputCsv } from "@/src/server/get-transformation-input-csv"
+import { runTransformation } from "@/src/server/run-transformation"
 import { updateTransformationCode } from "@/src/server/update-transformation-code"
+import { updateTransformationCsvResult } from "@/src/server/update-transformation-csv-result"
 import { updateTransformationStatus } from "@/src/server/update-transformation-status"
 
 interface TransformRequestBody {
@@ -49,8 +52,20 @@ export async function POST(request: Request): Promise<Response> {
 
   console.log("[api/transform] submitted text:", bodyResult.value.text)
 
+  const inputCsvResult = await getTransformationInputCsv(
+    transformationResult.value.id,
+  )
+
+  if (inputCsvResult.isErr()) {
+    return Response.json({ error: inputCsvResult.error }, { status: 500 })
+  }
+
   return new Response(
-    createTransformStream(transformationResult.value.id, bodyResult.value.text),
+    createTransformStream(
+      transformationResult.value.id,
+      bodyResult.value.text,
+      inputCsvResult.value,
+    ),
     {
       headers: {
         "Content-Type": "application/x-ndjson; charset=utf-8",
@@ -103,6 +118,7 @@ function isTransformRequestBody(value: unknown): value is TransformRequestBody {
 function createTransformStream(
   transformationId: string,
   prompt: string,
+  inputCsv: string,
 ): ReadableStream {
   const encoder = new TextEncoder()
 
@@ -113,6 +129,7 @@ function createTransformStream(
         encoder,
         transformationId,
         prompt,
+        inputCsv,
       )
 
       if (streamResult.isErr()) {
@@ -130,6 +147,7 @@ async function streamTransformationPhases(
   encoder: TextEncoder,
   transformationId: string,
   prompt: string,
+  inputCsv: string,
 ): Promise<Result<void, string>> {
   for (const phase of transformationPhases) {
     const updateResult = await updateTransformationStatus(
@@ -161,6 +179,7 @@ async function streamTransformationPhases(
       transformationId,
       phase,
       prompt,
+      inputCsv,
     )
 
     if (phaseResult.isErr()) {
@@ -181,30 +200,58 @@ async function executeTransformationStage(
   transformationId: string,
   phase: (typeof transformationPhases)[number],
   prompt: string,
+  inputCsv: string,
 ): Promise<Result<void, string>> {
-  if (phase !== "generating") {
+  if (phase === "generating") {
+    const generationResult = await streamTransformationCode(
+      prompt,
+      inputCsv,
+      code => {
+        return enqueueTransformStreamEvent(controller, encoder, {
+          type: "code",
+          transformationId,
+          code,
+        })
+      },
+    )
+
+    if (generationResult.isErr()) {
+      return err(generationResult.error)
+    }
+
+    const updateCodeResult = await updateTransformationCode(
+      transformationId,
+      generationResult.value,
+    )
+
+    if (updateCodeResult.isErr()) {
+      return err(updateCodeResult.error)
+    }
+
     return ok(undefined)
   }
 
-  const generationResult = await streamTransformationCode(prompt, code => {
-    return enqueueTransformStreamEvent(controller, encoder, {
-      type: "code",
+  if (phase === "running") {
+    const runResult = await runTransformation(transformationId)
+
+    if (runResult.isErr()) {
+      return err(runResult.error)
+    }
+
+    const updateCsvResult = await updateTransformationCsvResult(
       transformationId,
-      code,
+      runResult.value,
+    )
+
+    if (updateCsvResult.isErr()) {
+      return err(updateCsvResult.error)
+    }
+
+    return enqueueTransformStreamEvent(controller, encoder, {
+      type: "csv",
+      transformationId,
+      csv: runResult.value,
     })
-  })
-
-  if (generationResult.isErr()) {
-    return err(generationResult.error)
-  }
-
-  const updateCodeResult = await updateTransformationCode(
-    transformationId,
-    generationResult.value,
-  )
-
-  if (updateCodeResult.isErr()) {
-    return err(updateCodeResult.error)
   }
 
   return ok(undefined)

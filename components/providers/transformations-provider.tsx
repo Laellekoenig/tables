@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState } from "react"
+import { createContext, useContext, useEffect, useState } from "react"
 import { err, ok, type Result } from "neverthrow"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useProject } from "@/src/hooks/use-project"
@@ -26,6 +26,7 @@ export interface ClientTransformation {
   optimisticId: string | null
   prompt: string
   code: string | null
+  csvResult: string | null
   status: TransformationStatus
   phases: TransformationStatus[]
   state: "streaming" | "complete" | "error"
@@ -86,6 +87,7 @@ export function useTransformations(): UseTransformationsResult {
 }
 
 function useTransformationsValue(projectId: string): UseTransformationsResult {
+  const { resetDisplayedCsv, setDisplayedCsvFromText } = useProject()
   const [clearError, setClearError] = useState<string | null>(null)
   const [isDeletingTransformations, setIsDeletingTransformations] =
     useState(false)
@@ -104,6 +106,26 @@ function useTransformationsValue(projectId: string): UseTransformationsResult {
       return result.value.map(mapServerTransformationToClient)
     },
   })
+
+  useEffect(() => {
+    const latestCsvResult = query.data?.find(transformationItem => {
+      return Boolean(transformationItem.csvResult?.trim())
+    })?.csvResult
+
+    if (!latestCsvResult) {
+      resetDisplayedCsv()
+      return
+    }
+
+    const displayResult = setDisplayedCsvFromText(latestCsvResult)
+
+    if (displayResult.isErr()) {
+      console.error(
+        "[TransformationsProvider] Failed to display transformation CSV:",
+        displayResult.error,
+      )
+    }
+  }, [query.data, resetDisplayedCsv, setDisplayedCsvFromText])
 
   async function createOptimisticTransformation(
     prompt: string,
@@ -193,6 +215,17 @@ function useTransformationsValue(projectId: string): UseTransformationsResult {
     optimisticId: string,
     event: TransformStreamEvent,
   ): void {
+    if (event.type === "csv") {
+      const displayResult = setDisplayedCsvFromText(event.csv)
+
+      if (displayResult.isErr()) {
+        console.error(
+          "[TransformationsProvider] Failed to display streamed CSV:",
+          displayResult.error,
+        )
+      }
+    }
+
     queryClient.setQueryData<ClientTransformation[]>(queryKey, old => {
       return updateCachedTransformationFromStream(
         old ?? [],
@@ -262,6 +295,7 @@ function mapServerTransformationToClient(
     optimisticId: null,
     prompt: transformation.prompt,
     code: transformation.code,
+    csvResult: transformation.csvResult,
     status: transformation.status,
     phases: getPhasesFromStatus(transformation.status),
     state: getClientTransformationState(transformation.status),
@@ -280,6 +314,7 @@ function createOptimisticCacheTransformation(
     optimisticId,
     prompt,
     code: null,
+    csvResult: null,
     status: transformationPhases[0],
     phases: [],
     state: "streaming",
@@ -299,6 +334,15 @@ function updateCachedTransformationFromStream(
       optimisticId,
       event.transformationId,
       event.code,
+    )
+  }
+
+  if (event.type === "csv") {
+    return updateCachedTransformationCsvResult(
+      transformations,
+      optimisticId,
+      event.transformationId,
+      event.csv,
     )
   }
 
@@ -328,6 +372,7 @@ function updateCachedTransformationFromStream(
       phases: getPhasesFromStatus(event.phase),
       state: "streaming",
       code: transformation.code,
+      csvResult: transformation.csvResult,
       errorMessage: null,
     }
   })
@@ -348,6 +393,26 @@ function updateCachedTransformationCode(
       ...transformation,
       id: serverId,
       code,
+      errorMessage: null,
+    }
+  })
+}
+
+function updateCachedTransformationCsvResult(
+  transformations: ClientTransformation[],
+  optimisticId: string,
+  serverId: string,
+  csvResult: string,
+): ClientTransformation[] {
+  return transformations.map(transformation => {
+    if (!doesTransformationMatchEvent(transformation, optimisticId, serverId)) {
+      return transformation
+    }
+
+    return {
+      ...transformation,
+      id: serverId,
+      csvResult,
       errorMessage: null,
     }
   })

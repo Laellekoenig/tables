@@ -1,14 +1,16 @@
 import "server-only"
 
 import { err, ok, ResultAsync, type Result } from "neverthrow"
+import { createCsvHeadPreview } from "@/src/lib/csv-head-preview"
 import { safeStreamGenerateText } from "@/src/lib/safe-stream-generate"
 
 export async function streamTransformationCode(
   prompt: string,
+  inputCsv: string,
   onCode: (code: string) => Result<void, string>,
 ): Promise<Result<string, string>> {
   const generationResult = await ResultAsync.fromPromise(
-    streamTransformationCodeInternal(prompt, onCode),
+    streamTransformationCodeInternal(prompt, inputCsv, onCode),
     (error: unknown) => {
       console.error("[streamTransformationCode] Generation failed:", error)
       return "Failed to generate text."
@@ -24,11 +26,18 @@ export async function streamTransformationCode(
 
 async function streamTransformationCodeInternal(
   prompt: string,
+  inputCsv: string,
   onCode: (code: string) => Result<void, string>,
 ): Promise<Result<string, string>> {
+  const csvHeadResult = createCsvHeadPreview(inputCsv)
+
+  if (csvHeadResult.isErr()) {
+    return err(csvHeadResult.error)
+  }
+
   const streamResult = safeStreamGenerateText(
     getTransformationSystemPrompt(),
-    getTransformationUserPrompt(prompt),
+    getTransformationUserPrompt(prompt, csvHeadResult.value),
   )
 
   if (streamResult.isErr()) {
@@ -65,7 +74,7 @@ function getTransformationSystemPrompt(): string {
     "You generate Python transformation scripts using pandas.",
     "Return only executable Python code with no markdown fences or explanation.",
     "Return a single function that takes a pandas DataFrame and returns the transformed pandas DataFrame.",
-    "Give the function a suitable descriptive name.",
+    "Name the function transform.",
     "Use Python type annotations for the function signature.",
     "Assume pandas and numpy are already imported and available.",
     "Do not read from files or write to files.",
@@ -74,9 +83,11 @@ function getTransformationSystemPrompt(): string {
   ].join("\n")
 }
 
-function getTransformationUserPrompt(prompt: string): string {
+function getTransformationUserPrompt(prompt: string, csvHead: string): string {
   return [
     "Create a Python function that satisfies this transformation request:",
     prompt,
+    "This is the pandas df.head() preview of the input data:",
+    csvHead,
   ].join("\n\n")
 }

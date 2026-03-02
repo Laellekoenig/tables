@@ -42,6 +42,7 @@ export default async function ProjectPage({
       <ProjectProvider
         project={projectResult.value}
         csv={csvResult.value}
+        csvText={projectResult.value.csvContent}
       >
         <ResizablePanelGroup orientation="horizontal">
           <ResizablePanel
