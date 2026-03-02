@@ -2,7 +2,6 @@
 
 import { useTheme } from "next-themes"
 import { Sun, Moon } from "lucide-react"
-import { Toggle } from "@/components/ui/toggle"
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 

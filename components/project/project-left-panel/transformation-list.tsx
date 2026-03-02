@@ -20,7 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { PythonCodeBlock } from "@/components/python-code-block"
+import { PythonCodeBlock } from "@/components/project/python-code-block"
 
 export function TransformationList() {
   const {

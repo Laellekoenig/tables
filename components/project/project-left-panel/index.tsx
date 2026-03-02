@@ -4,8 +4,8 @@ import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { TransformationsProvider } from "@/components/providers/transformations-provider"
 import { buttonVariants } from "@/components/ui/button"
-import { TransformForm } from "@/components/project-left-panel/transform-form"
-import { TransformationList } from "@/components/project-left-panel/transformation-list"
+import { TransformForm } from "@/components/project/project-left-panel/transform-form"
+import { TransformationList } from "@/components/project/project-left-panel/transformation-list"
 import { useProject } from "@/src/hooks/use-project"
 
 export function ProjectLeftPanel() {
