@@ -17,6 +17,29 @@ interface TransformRequestBody {
   projectId: string
 }
 
+interface CreateTransformStreamInput {
+  inputCsv: string
+  prompt: string
+  transformationId: string
+}
+
+interface StreamTransformationPhasesInput {
+  controller: ReadableStreamDefaultController<Uint8Array>
+  encoder: TextEncoder
+  inputCsv: string
+  prompt: string
+  transformationId: string
+}
+
+interface ExecuteTransformationStageInput {
+  controller: ReadableStreamDefaultController<Uint8Array>
+  encoder: TextEncoder
+  inputCsv: string
+  phase: (typeof transformationPhases)[number]
+  prompt: string
+  transformationId: string
+}
+
 export async function POST(request: Request): Promise<Response> {
   const bodyResult = await safeRequestJson<unknown>(request).andThen(
     validateTransformRequestBody,
@@ -50,8 +73,6 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: transformationResult.error }, { status: 500 })
   }
 
-  console.log("[api/transform] submitted text:", bodyResult.value.text)
-
   const inputCsvResult = await getTransformationInputCsv(
     transformationResult.value.id,
   )
@@ -61,11 +82,11 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   return new Response(
-    createTransformStream(
-      transformationResult.value.id,
-      bodyResult.value.text,
-      inputCsvResult.value,
-    ),
+    createTransformStream({
+      transformationId: transformationResult.value.id,
+      prompt: bodyResult.value.text,
+      inputCsv: inputCsvResult.value,
+    }),
     {
       headers: {
         "Content-Type": "application/x-ndjson; charset=utf-8",
@@ -115,22 +136,22 @@ function isTransformRequestBody(value: unknown): value is TransformRequestBody {
   return typeof value.projectId === "string"
 }
 
-function createTransformStream(
-  transformationId: string,
-  prompt: string,
-  inputCsv: string,
-): ReadableStream {
+function createTransformStream({
+  transformationId,
+  prompt,
+  inputCsv,
+}: CreateTransformStreamInput): ReadableStream {
   const encoder = new TextEncoder()
 
   return new ReadableStream({
     async start(controller) {
-      const streamResult = await streamTransformationPhases(
+      const streamResult = await streamTransformationPhases({
         controller,
         encoder,
         transformationId,
         prompt,
         inputCsv,
-      )
+      })
 
       if (streamResult.isErr()) {
         controller.error(streamResult.error)
@@ -143,12 +164,10 @@ function createTransformStream(
 }
 
 async function streamTransformationPhases(
-  controller: ReadableStreamDefaultController<Uint8Array>,
-  encoder: TextEncoder,
-  transformationId: string,
-  prompt: string,
-  inputCsv: string,
+  input: StreamTransformationPhasesInput,
 ): Promise<Result<void, string>> {
+  const { transformationId, controller, encoder } = input
+
   for (const phase of transformationPhases) {
     const updateResult = await updateTransformationStatus(
       transformationId,
@@ -173,35 +192,27 @@ async function streamTransformationPhases(
       return err(enqueuePhaseResult.error)
     }
 
-    const phaseResult = await executeTransformationStage(
-      controller,
-      encoder,
-      transformationId,
+    const phaseResult = await executeTransformationStage({
+      ...input,
       phase,
-      prompt,
-      inputCsv,
-    )
+    })
 
     if (phaseResult.isErr()) {
       return err(phaseResult.error)
-    }
-
-    if (phase !== transformationPhases[transformationPhases.length - 1]) {
-      await sleep(1000)
     }
   }
 
   return ok(undefined)
 }
 
-async function executeTransformationStage(
-  controller: ReadableStreamDefaultController<Uint8Array>,
-  encoder: TextEncoder,
-  transformationId: string,
-  phase: (typeof transformationPhases)[number],
-  prompt: string,
-  inputCsv: string,
-): Promise<Result<void, string>> {
+async function executeTransformationStage({
+  controller,
+  encoder,
+  transformationId,
+  phase,
+  prompt,
+  inputCsv,
+}: ExecuteTransformationStageInput): Promise<Result<void, string>> {
   if (phase === "generating") {
     const generationResult = await streamTransformationCode(
       prompt,
@@ -265,20 +276,6 @@ function enqueueTransformStreamEvent(
   return enqueueStreamEvent({ controller, encoder, event })
 }
 
-async function sleep(ms: number): Promise<void> {
-  await new Promise(resolve => {
-    setTimeout(resolve, ms)
-  })
-}
-
-function getProjectErrorStatus(error: string): number {
-  if (error === "Project not found.") {
-    return 404
-  }
-
-  return 500
-}
-
 const enqueueStreamEvent = Result.fromThrowable(
   ({
     controller,
@@ -293,3 +290,11 @@ const enqueueStreamEvent = Result.fromThrowable(
   },
   () => "Failed to write transformation stream event.",
 )
+
+function getProjectErrorStatus(error: string): number {
+  if (error === "Project not found.") {
+    return 404
+  }
+
+  return 500
+}
