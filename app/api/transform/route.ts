@@ -8,10 +8,7 @@ import { streamTransformationExplanation } from "@/src/server/generate-transform
 import { getAuthedSession } from "@/src/server/auth-helper"
 import { getProjectSnapshot } from "@/src/server/get-project-snapshot"
 import { getTransformationInputCsv } from "@/src/server/get-transformation-input-csv"
-import {
-  getStoredTransformationCode,
-  runTransformation,
-} from "@/src/server/run-transformation"
+import { runTransformation } from "@/src/server/run-transformation"
 import { updateTransformationCode } from "@/src/server/update-transformation-code"
 import { updateTransformationCsvResult } from "@/src/server/update-transformation-csv-result"
 import { updateTransformationExplanation } from "@/src/server/update-transformation-explanation"
@@ -36,12 +33,19 @@ interface StreamTransformationPhasesInput {
   transformationId: string
 }
 
-interface ExecuteTransformationStageInput {
+interface ExecuteTransformationGenerationStageInput {
   controller: ReadableStreamDefaultController<Uint8Array>
   encoder: TextEncoder
   inputCsv: string
-  phase: (typeof transformationPhases)[number]
   prompt: string
+  transformationId: string
+}
+
+interface ExecuteTransformationExplanationStageInput {
+  code: string
+  controller: ReadableStreamDefaultController<Uint8Array>
+  encoder: TextEncoder
+  inputCsv: string
   transformationId: string
 }
 
@@ -172,6 +176,8 @@ async function streamTransformationPhases(
   input: StreamTransformationPhasesInput,
 ): Promise<Result<void, string>> {
   const { transformationId, controller, encoder } = input
+  let generatedCode = ""
+  let runResultPromise: Promise<Result<string, string>> | null = null
 
   for (const phase of transformationPhases) {
     const updateResult = await updateTransformationStatus(
@@ -200,62 +206,79 @@ async function streamTransformationPhases(
     const phaseResult = await executeTransformationStage({
       ...input,
       phase,
+      generatedCode,
+      runResultPromise,
     })
 
     if (phaseResult.isErr()) {
       return err(phaseResult.error)
     }
+
+    generatedCode = phaseResult.value.generatedCode
+    runResultPromise = phaseResult.value.runResultPromise
+  }
+
+  const doneResult = await updateTransformationStatus(transformationId, "done")
+
+  if (doneResult.isErr()) {
+    return err(doneResult.error)
   }
 
   return ok(undefined)
 }
 
 async function executeTransformationStage({
-  controller,
-  encoder,
-  transformationId,
   phase,
-  prompt,
-  inputCsv,
-}: ExecuteTransformationStageInput): Promise<Result<void, string>> {
+  ...input
+}: StreamTransformationPhasesInput & {
+  generatedCode: string
+  phase: (typeof transformationPhases)[number]
+  runResultPromise: Promise<Result<string, string>> | null
+}): Promise<
+  Result<
+    {
+      generatedCode: string
+      runResultPromise: Promise<Result<string, string>> | null
+    },
+    string
+  >
+> {
   if (phase === "generating") {
-    const generationResult = await streamTransformationCode(
-      prompt,
-      inputCsv,
-      code => {
-        return enqueueTransformStreamEvent(controller, encoder, {
-          type: "code",
-          transformationId,
-          code,
-        })
-      },
-    )
+    return executeTransformationGenerationStage(input)
+  }
 
-    if (generationResult.isErr()) {
-      return err(generationResult.error)
+  if (phase === "explanation") {
+    const runResultPromise =
+      input.runResultPromise ?? runTransformation(input.transformationId)
+
+    const explanationResult = await executeTransformationExplanationStage({
+      code: input.generatedCode,
+      controller: input.controller,
+      encoder: input.encoder,
+      inputCsv: input.inputCsv,
+      transformationId: input.transformationId,
+    })
+
+    if (explanationResult.isErr()) {
+      return err(explanationResult.error)
     }
 
-    const updateCodeResult = await updateTransformationCode(
-      transformationId,
-      generationResult.value,
-    )
-
-    if (updateCodeResult.isErr()) {
-      return err(updateCodeResult.error)
-    }
-
-    return ok(undefined)
+    return ok({
+      generatedCode: input.generatedCode,
+      runResultPromise,
+    })
   }
 
   if (phase === "running") {
-    const runResult = await runTransformation(transformationId)
+    const runResult = await (input.runResultPromise
+      ?? runTransformation(input.transformationId))
 
     if (runResult.isErr()) {
       return err(runResult.error)
     }
 
     const updateCsvResult = await updateTransformationCsvResult(
-      transformationId,
+      input.transformationId,
       runResult.value,
     )
 
@@ -263,46 +286,108 @@ async function executeTransformationStage({
       return err(updateCsvResult.error)
     }
 
-    return enqueueTransformStreamEvent(controller, encoder, {
-      type: "csv",
-      transformationId,
-      csv: runResult.value,
-    })
-  }
-
-  if (phase === "explanation") {
-    const codeResult = await getStoredTransformationCode(transformationId)
-
-    if (codeResult.isErr()) {
-      return err(codeResult.error)
-    }
-
-    const explanationResult = await streamTransformationExplanation(
-      codeResult.value,
-      inputCsv,
-      explanation => {
-        return enqueueTransformStreamEvent(controller, encoder, {
-          type: "explanation",
-          transformationId,
-          explanation,
-        })
+    const enqueueCsvResult = enqueueTransformStreamEvent(
+      input.controller,
+      input.encoder,
+      {
+        type: "csv",
+        transformationId: input.transformationId,
+        csv: runResult.value,
       },
     )
 
-    if (explanationResult.isErr()) {
-      return err(explanationResult.error)
+    if (enqueueCsvResult.isErr()) {
+      return err(enqueueCsvResult.error)
     }
 
-    const updateExplanationResult = await updateTransformationExplanation(
-      transformationId,
-      explanationResult.value,
-    )
+    return ok({
+      generatedCode: input.generatedCode,
+      runResultPromise: input.runResultPromise,
+    })
+  }
 
-    if (updateExplanationResult.isErr()) {
-      return err(updateExplanationResult.error)
-    }
+  return ok({
+    generatedCode: input.generatedCode,
+    runResultPromise: input.runResultPromise,
+  })
+}
 
-    return ok(undefined)
+async function executeTransformationGenerationStage({
+  controller,
+  encoder,
+  transformationId,
+  prompt,
+  inputCsv,
+}: ExecuteTransformationGenerationStageInput): Promise<
+  Result<
+    {
+      generatedCode: string
+      runResultPromise: null
+    },
+    string
+  >
+> {
+  const generationResult = await streamTransformationCode(
+    prompt,
+    inputCsv,
+    code => {
+      return enqueueTransformStreamEvent(controller, encoder, {
+        type: "code",
+        transformationId,
+        code,
+      })
+    },
+  )
+
+  if (generationResult.isErr()) {
+    return err(generationResult.error)
+  }
+
+  const updateCodeResult = await updateTransformationCode(
+    transformationId,
+    generationResult.value,
+  )
+
+  if (updateCodeResult.isErr()) {
+    return err(updateCodeResult.error)
+  }
+
+  return ok({
+    generatedCode: generationResult.value,
+    runResultPromise: null,
+  })
+}
+
+async function executeTransformationExplanationStage({
+  code,
+  controller,
+  encoder,
+  inputCsv,
+  transformationId,
+}: ExecuteTransformationExplanationStageInput): Promise<Result<void, string>> {
+  const explanationResult = await streamTransformationExplanation(
+    code,
+    inputCsv,
+    explanation => {
+      return enqueueTransformStreamEvent(controller, encoder, {
+        type: "explanation",
+        transformationId,
+        explanation,
+      })
+    },
+  )
+
+  if (explanationResult.isErr()) {
+    return err(explanationResult.error)
+  }
+
+  const updateExplanationResult = await updateTransformationExplanation(
+    transformationId,
+    explanationResult.value,
+  )
+
+  if (updateExplanationResult.isErr()) {
+    return err(updateExplanationResult.error)
   }
 
   return ok(undefined)

@@ -15,16 +15,16 @@ import { project } from "./project-schema"
 export const transformationStatuses = [
   "init",
   "generating",
-  "running",
   "explanation",
+  "running",
   "done",
 ] as const
 
 export const transformationPhases = [
   "init",
   "generating",
-  "running",
   "explanation",
+  "running",
 ] as const satisfies readonly (typeof transformationStatuses)[number][]
 
 export const transformationStatus = pgEnum(

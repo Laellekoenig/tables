@@ -481,7 +481,7 @@ function updateCachedTransformationCompletion(
     return {
       ...transformation,
       optimisticId: null,
-      status: transformationPhases[transformationPhases.length - 1],
+      status: "done",
       state: "complete",
     }
   })
@@ -525,7 +525,7 @@ function getPhasesFromStatus(
 function getClientTransformationState(
   status: TransformationStatus,
 ): ClientTransformation["state"] {
-  if (status === "done" || status === "explanation") {
+  if (status === "done") {
     return "complete"
   }
 
