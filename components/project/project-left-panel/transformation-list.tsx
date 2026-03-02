@@ -21,6 +21,9 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { PythonCodeBlock } from "@/components/project/python-code-block"
+import type { Components } from "react-markdown"
+import ReactMarkdown from "react-markdown"
+import { cn } from "@/lib/utils"
 
 export function TransformationList() {
   const {
@@ -216,9 +219,11 @@ function TransformationExplanationBlock({
       </p>
 
       <div className="rounded-xl border border-border/70 bg-muted/20 px-4 py-3">
-        <p className="whitespace-pre-wrap text-sm leading-6 text-foreground">
-          {explanation}
-        </p>
+        <div className="space-y-3 text-sm leading-6 text-foreground">
+          <ReactMarkdown components={explanationMarkdownComponents}>
+            {explanation}
+          </ReactMarkdown>
+        </div>
       </div>
     </div>
   )
@@ -325,4 +330,47 @@ function formatTransformationTimestamp(createdAt: number): string {
 
 function shortenTransformationId(id: string): string {
   return `${id.slice(0, 8)}...`
+}
+
+const explanationMarkdownComponents: Components = {
+  p: ({ children }) => {
+    return <p className="whitespace-pre-wrap">{children}</p>
+  },
+  ul: ({ children }) => {
+    return <ul className="ml-5 list-disc space-y-1">{children}</ul>
+  },
+  ol: ({ children }) => {
+    return <ol className="ml-5 list-decimal space-y-1">{children}</ol>
+  },
+  li: ({ children }) => {
+    return <li className="marker:text-muted-foreground">{children}</li>
+  },
+  strong: ({ children }) => {
+    return <strong className="font-semibold text-foreground">{children}</strong>
+  },
+  em: ({ children }) => {
+    return <em className="italic text-foreground">{children}</em>
+  },
+  code: ({ children, className }) => {
+    const isBlock = Boolean(className)
+
+    if (isBlock) {
+      return (
+        <code
+          className={cn(
+            "block overflow-x-auto rounded-lg bg-muted px-3 py-2 font-mono text-[0.8125rem] text-foreground",
+            className,
+          )}
+        >
+          {children}
+        </code>
+      )
+    }
+
+    return (
+      <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.8125rem] text-foreground">
+        {children}
+      </code>
+    )
+  },
 }
